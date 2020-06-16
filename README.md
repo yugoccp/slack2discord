@@ -47,7 +47,7 @@ Go to the project folder and run:
 
 ## Configure scirpt
 Go to the project folder and fill the config.json file
-* botToken: your bot token available when your application Bot configuration
+* botToken: your bot token available when your application Bot configuration ***!!! NEVER share or commit your bot token !!!***
 * guildId: your target server Id
 * backupPath: your Slack backup message folder
 * includeChannels: list of channel names to include (optional)
