@@ -46,12 +46,14 @@ Go to the project folder and run:
 `npm install`
 
 ## Configure scirpt
-Go to the project folder and fill the config.json file
-* botToken: your bot token available when your application Bot configuration ***!!! NEVER share or commit your bot token !!!***
-* guildId: your target server Id
-* backupPath: your Slack backup message folder
-* includeChannels: list of channel names to include (optional)
-* excludeChannels: list of channel names to exclude (optional)
+1. Go to the project folder
+2. Make a copy of config.json.sample and rename to config.json
+3. Fill the config.json file:
+>* botToken: your bot token available when your application Bot configuration ***!!! NEVER share or commit your bot token !!!***
+>* guildId: your target server Id
+>* backupPath: your Slack backup message folder
+>* includeChannels: list of channel names to include (optional)
+>* excludeChannels: list of channel names to exclude (optional)
 
 ## Run the sript
 Go to the project folder and run:
