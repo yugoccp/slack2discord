@@ -54,6 +54,7 @@ Go to the project folder and run:
 >* backupPath: your Slack backup message folder
 >* includeChannels: list of channel names to include (optional)
 >* excludeChannels: list of channel names to exclude (optional)
+>* mapChannels: map of origin channel to target channel name (optional)
 
 ## Run the sript
 Go to the project folder and run:
