@@ -25,16 +25,12 @@ const getChannels = async ({ guildId }) => {
 }
 
 const createChannel = async ({ name, guildId, parentId }) => {
-  try {
     const resp = await axios.post(`/guilds/${guildId}/channels`, {
       "type":0,
       "name": name,
       "parent_id": parentId
     });
     return resp.data;
-  } catch (err) {
-    console.error(err);
-  }
 }
 
 const createChannels = async ({ channelNames, guildId, parentId }) => {
@@ -67,11 +63,7 @@ const createChannelsWebhook = async ({ channelIds, webhookName }) => {
 }
 
 const sendMessage = async ({ data, webhook }) => {
-  try {
-    await axios.post(`/webhooks/${webhook.id}/${webhook.token}/slack`, data);
-  } catch (err) {
-    console.error(err);
-  }
+  return await axios.post(`/webhooks/${webhook.id}/${webhook.token}/slack`, data);
 }
 
 
@@ -86,7 +78,7 @@ const getOrCreateChannels = async ({ channelNames, guildId }) => {
   });
 
   const channelNamesSet = new Set(channelNames);
-  return [...createdChannels, ...currentChannels].filter(ch => channelNamesSet.has(ch.name));
+  return [...createdChannels, ...currentChannels].filter(ch => ch && channelNamesSet.has(ch.name));
 }
 
 const getOrCreateWebhooks = async ({ channelIds, webhookName }) => {
