@@ -30,12 +30,10 @@ const app = async () => {
     const formattedMsgs = msgs
       .map(msg => replaceMentions(msg, usersById))
       .map(msg => addUsername(msg, usersById))
-      .map(addDateTime)
+      .map((msg, i, arr) => addDateTime(msg, i > 0 ? arr[i - 1] : {}))
       .map(splitLongMessage)
       .reduce(utils.concat, []);
 
-    
-    
     const attachments = await Promise.all(
       msgs
         .filter(msg => msg.files)
@@ -60,16 +58,21 @@ const app = async () => {
         }
         ++i;
       } catch (err) {
-        if (err.response.status == 429) {
-          const retryAfter = err.response.headers['retry-after']
-          if (retryAfter) {
-            console.log(`Retry after: ${retryAfter}ms`);
-            await utils.delay(retryAfter);
+        if (err.response) {
+          if (err.response.status == 429) {
+            const retryAfter = err.response.headers['retry-after']
+            if (retryAfter) {
+              console.log(`Too many requests. Retry after: ${retryAfter}ms.`);
+              await utils.delay(retryAfter);
+            }
+          } else {
+            console.error(`Error sending message ${i} at ${file.path} to ${targetChannel}: ${err.response.data.text || err.response.status}`);
+            ++i;
           }
         } else {
-          console.error(`Error sending message ${i} at ${file.path} to ${targetChannel}: ${err.response.data.text || err.response.status}`);
-          ++i;
+          console.error(err);
         }
+        
       }
 
       try {
@@ -123,9 +126,11 @@ const splitLongMessage = (message) => {
   return [message];
 }
 
-const addDateTime = (message) => {
-  const dateStr = utils.dateFormat(new Date(message.ts*1000));
-  message.text = '`' + dateStr + '` ' + message.text;
+const addDateTime = (message, previousMessage) => {
+  if (message.username != previousMessage.username) {
+    const dateStr = utils.dateFormat(new Date(message.ts*1000));
+    message.text = '`' + dateStr + '`\n' + message.text;
+  }
   return message;
 }
 
