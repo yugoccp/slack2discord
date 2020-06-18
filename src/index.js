@@ -84,6 +84,7 @@ const app = async () => {
               }))
               .map(data => discordApi.sendAttachment({ data, webhook }))
           );
+          attachmentByMessageId[msg.client_msg_id] = null;
         }
       } catch (err) {
         console.error(err);
