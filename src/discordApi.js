@@ -1,9 +1,11 @@
 const axios = require('axios');
-const FormData = require('form-data');
+const { WebhookClient, MessageAttachment } = require('discord.js');
 const { botToken, parentChannel } = require('../config.json');
+
 
 axios.defaults.baseURL = 'https://discord.com/api/v6/';
 axios.defaults.headers.common['Authorization'] = `Bot ${botToken}`;
+
 
 const createWebhook = async ({ channelId, name }) => {
   const resp = await axios.post(`/channels/${channelId}/webhooks`, {
@@ -65,12 +67,13 @@ const sendMessage = async ({ data, webhook }) => {
 }
 
 const sendAttachment = async ({ data, webhook }) => {
-  let fd = new FormData();
-  fd.append('file', data.file)
-  fd.append('username', data.username)
-  fd.append('content', 'attachment')
-  const formHeaders = fd.getHeaders();
-  return await axios.post(`/webhooks/${webhook.id}/${webhook.token}`, fd, {headers: formHeaders});
+  const file = Buffer.from(data.file);
+  const attachment = new MessageAttachment(file, data.name);
+  const webhookClient = new WebhookClient(webhook.id, webhook.token);
+  await webhookClient.send(data.name, {
+    username: data.username,
+    files: [attachment]
+  })
 }
 
 const getOrCreateChannels = async ({ channelNames, guildId }) => {

@@ -27,12 +27,14 @@ const app = async () => {
   for (const file of files) {
     const msgs = (await slackBackupReader.getMessages(file.path))
 
-    msgs
+    const formattedMsgs = msgs
       .map(msg => replaceMentions(msg, usersById))
       .map(msg => addUsername(msg, usersById))
       .map(addDateTime)
       .map(splitLongMessage)
       .reduce(utils.concat, []);
+
+    
     
     const attachments = await Promise.all(
       msgs
@@ -47,9 +49,9 @@ const app = async () => {
     const webhook = discordWebhooksByChannelId[channel.id];
 
     let i = 0;
-    while(i < msgs.length) {
+    while(i < formattedMsgs.length) {
       
-      const msg = msgs[i];
+      const msg = formattedMsgs[i];
 
       try {
         const resp = await discordApi.sendMessage({ data: msg, webhook });
@@ -77,7 +79,8 @@ const app = async () => {
             msgAttachments
               .map(att => ({
                 username: msg.username,
-                file: att.file
+                file: att.file,
+                name: att.name
               }))
               .map(data => discordApi.sendAttachment({ data, webhook }))
           );
@@ -90,11 +93,16 @@ const app = async () => {
 }
 
 const getAttachments = async message => {
-  const attachments = message.files.map(file => axios
-    .get(file.url_private_download.replace(/\\\//g, '/'))
+  const attachments = message.files.map(file => 
+    axios({
+      method: 'get',
+      url: file.url_private_download.replace(/\\\//g, '/'), 
+      responseType: 'arraybuffer'
+    })
     .then(resp => ({
       messageId: message.client_msg_id,
-      file: resp.data
+      file: resp.data,
+      name: file.name
     }))
     .catch(console.error)
   )
@@ -102,8 +110,9 @@ const getAttachments = async message => {
 }
 
 const splitLongMessage = (message) => {
-  if (message.text.length > 2000) {
-    const textChunks = message.text.match(new RegExp('.{1,' + length + '}', 'g'));
+  const maxLength = 2000;
+  if (message.text.length > maxLength) {
+    const textChunks = message.text.match(new RegExp('.{1,' + maxLength + '}', 'g'));
     return textChunks.map(tc => ({
       ...message,
       text: tc
