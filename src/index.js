@@ -31,8 +31,10 @@ const app = async () => {
       .map(msg => replaceMentions(msg, usersById))
       .map(msg => addUsername(msg, usersById))
       .map((msg, i, arr) => addDateTime(msg, i > 0 ? arr[i - 1] : {}))
+      .map(addAvatar)
       .map(splitLongMessage)
-      .reduce(utils.concat, []);
+      .reduce(utils.concat, [])
+      .map(toDiscordMessage);
 
     const attachments = await Promise.all(
       msgs
@@ -66,7 +68,7 @@ const app = async () => {
               await utils.delay(retryAfter);
             }
           } else {
-            console.error(`Error sending message ${i} at ${file.path} to ${targetChannel}: ${err.response.data.text || err.response.status}`);
+            console.error(`Error ${i}: ${file.path}`, err.response.data);
             ++i;
           }
         } else {
@@ -90,10 +92,32 @@ const app = async () => {
           attachmentByMessageId[msg.client_msg_id] = null;
         }
       } catch (err) {
-        console.error(err);
+        if (err.response) {
+          console.error(`Error ${i}: ${file.path}`, err.response.data);
+        } else {
+          console.error(err);
+        }
       }
     }
   }
+}
+
+const toDiscordMessage = (message) => {
+  const { text, username, ts, avatar_url, attachments } = message;
+  return {
+    content: text,
+    username,
+    ts,
+    avatar_url,
+    attachments
+  }
+}
+
+const addAvatar = (message) => {
+  if (message.user_profile) {
+    message.avatar_url = message.user_profile.image_72.replace(/\\\//g, '/')
+  }
+  return message;
 }
 
 const getAttachments = async message => {
@@ -108,7 +132,13 @@ const getAttachments = async message => {
       file: resp.data,
       name: file.name
     }))
-    .catch(console.error)
+    .catch(err => {
+      if (err.response) {
+        console.error(`Error sending attachment:`, err.response.data);
+      } else {
+        console.error(err);
+      }
+    })
   )
   return Promise.all(attachments);
 }
