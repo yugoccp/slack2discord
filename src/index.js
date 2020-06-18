@@ -1,5 +1,6 @@
 const slackBackupReader = require('./slackBackupReader.js');
 const discordApi = require('./discordApi.js');
+const axios = require('axios');
 const utils = require('./utils.js');
 const { 
   guildId, 
@@ -32,6 +33,13 @@ const app = async () => {
       .map(addDateTime)
       .map(splitLongMessage)
       .reduce(utils.concat, []);
+    
+    const attachments = await Promise.all(
+      msgs
+        .filter(msg => msg.files)
+        .map(getAttachments)
+    );
+    const attachmentByMessageId = utils.groupBy(attachments.reduce(utils.concat, []), 'messageId');
 
     const fileChannel = file.channel;
     const targetChannel = mapChannels[fileChannel] || fileChannel;
@@ -61,8 +69,36 @@ const app = async () => {
           ++i;
         }
       }
+
+      try {
+        const msgAttachments = attachmentByMessageId[msg.client_msg_id];
+        if (msgAttachments) {
+          await Promise.all(
+            msgAttachments
+              .map(att => ({
+                username: msg.username,
+                file: att.file
+              }))
+              .map(data => discordApi.sendAttachment({ data, webhook }))
+          );
+        }
+      } catch (err) {
+        console.error(err);
+      }
     }
   }
+}
+
+const getAttachments = async message => {
+  const attachments = message.files.map(file => axios
+    .get(file.url_private_download.replace(/\\\//g, '/'))
+    .then(resp => ({
+      messageId: message.client_msg_id,
+      file: resp.data
+    }))
+    .catch(console.error)
+  )
+  return Promise.all(attachments);
 }
 
 const splitLongMessage = (message) => {

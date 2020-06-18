@@ -1,4 +1,5 @@
 const axios = require('axios');
+const FormData = require('form-data');
 const { botToken, parentChannel } = require('../config.json');
 
 axios.defaults.baseURL = 'https://discord.com/api/v6/';
@@ -63,6 +64,14 @@ const sendMessage = async ({ data, webhook }) => {
   return await axios.post(`/webhooks/${webhook.id}/${webhook.token}/slack`, data);
 }
 
+const sendAttachment = async ({ data, webhook }) => {
+  let fd = new FormData();
+  fd.append('file', data.file)
+  fd.append('username', data.username)
+  fd.append('content', 'attachment')
+  const formHeaders = fd.getHeaders();
+  return await axios.post(`/webhooks/${webhook.id}/${webhook.token}`, fd, {headers: formHeaders});
+}
 
 const getOrCreateChannels = async ({ channelNames, guildId }) => {
   const currentChannels = await getChannels({ guildId });
@@ -100,5 +109,6 @@ module.exports = {
   getChannelsWebhook,
   createChannels,
   getOrCreateWebhooks,
-  getOrCreateChannels
+  getOrCreateChannels,
+  sendAttachment
 }
