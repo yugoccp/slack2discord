@@ -1,10 +1,7 @@
 const axios = require('axios');
-const { botToken } = require('../config.json');
-
-const DISCORD_PARENT_CHANNEL = 'Text Channels';
+const { botToken, parentChannel } = require('../config.json');
 
 axios.defaults.baseURL = 'https://discord.com/api/v6/';
-axios.defaults.headers.post['Content-Type'] = 'application/json';
 axios.defaults.headers.common['Authorization'] = `Bot ${botToken}`;
 
 const createWebhook = async ({ channelId, name }) => {
@@ -70,10 +67,10 @@ const sendMessage = async ({ data, webhook }) => {
 const getOrCreateChannels = async ({ channelNames, guildId }) => {
   const currentChannels = await getChannels({ guildId });
   const currentChannelsByName = currentChannels.reduce((acc, ch) => ({ ...acc, [ch.name]: ch }), {});
-  const parentChannel = currentChannelsByName[DISCORD_PARENT_CHANNEL] || {};
+  const parentChannelObj = parentChannel ? currentChannelsByName[parentChannel] || {} : {};
   const createdChannels = await createChannels({ 
     channelNames: channelNames.filter(name => !currentChannelsByName[name]),
-    parentId: parentChannel.id,
+    parentId: parentChannelObj.id,
     guildId
   });
 
@@ -82,10 +79,7 @@ const getOrCreateChannels = async ({ channelNames, guildId }) => {
 }
 
 const getOrCreateWebhooks = async ({ channelIds, webhookName }) => {
-  const currentWebhooks = await getChannelsWebhook({ 
-    channelIds, 
-    webhookName 
-  });
+  const currentWebhooks = await getChannelsWebhook({ channelIds, webhookName });
   const currentWebhooksByChannelId = currentWebhooks.reduce((acc, wh) => ({ ...acc, [wh.channel_id]: wh }), {});
   const createdWebhooks = await createChannelsWebhook({ 
     channelIds: channelIds.filter(chId => !currentWebhooksByChannelId[chId]), 
