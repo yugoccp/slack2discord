@@ -1,7 +1,9 @@
 const axios = require('axios');
-const { WebhookClient, MessageAttachment } = require('discord.js');
+const { WebhookClient, MessageAttachment, Client } = require('discord.js');
 const { botToken, parentChannel } = require('../config.json');
 
+const client = new Client();
+client.login(botToken);
 
 axios.defaults.baseURL = 'https://discord.com/api/v6/';
 axios.defaults.headers.common['Authorization'] = `Bot ${botToken}`;
@@ -22,6 +24,10 @@ const getWebhooks = async (channelId) => {
 const getChannels = async (guildId) => {
   const resp = await axios.get(`/guilds/${guildId}/channels`);
   return resp.data;
+}
+
+const deleteChannel = async (channelId) => {
+  await axios.delete(`/channels/${channelId}`);
 }
 
 const createChannel = async (name, guildId, parentId) => {
@@ -45,7 +51,6 @@ const getChannelsWebhook = async (channelIds, webhookName) => {
       getWebhooks(channelId)
       .then(resp => resp.find(wh => wh.name === webhookName))
   ));
-
   return channelsWebhooks.filter(wh => wh);
 }
 
@@ -56,17 +61,28 @@ const createChannelsWebhook = async (channelIds, webhookName) => {
 }
 
 const sendMessage = async (data, webhook) => {
-  return await axios.post(`/webhooks/${webhook.id}/${webhook.token}/slack`, data);
+  // return await axios.post(`/webhooks/${webhook.id}/${webhook.token}/slack`, data);
+  const webhookClient = new WebhookClient(webhook.id, webhook.token);
+  return webhookClient.send(data.text, data);
 }
 
-const sendFileAttachment = async (data, webhook) => {
+const sendReaction = async (channelId, messageId, emoji) => {
+  console.log({channelId, messageId, emoji});
+  try {
+    await axios.put(`/channels/${channelId}/messages/${messageId}/reactions/${emoji}/@me`)
+  } catch (err) {
+    console.log(err);
+  }
+}
+
+const sendFile = async (data, webhook) => {
   const file = Buffer.from(data.file);
   const attachment = new MessageAttachment(file, data.name);
   const webhookClient = new WebhookClient(webhook.id, webhook.token);
   await webhookClient.send(data.name, {
     username: data.username,
     files: [attachment]
-  })
+  });
 }
 
 const getOrCreateChannels = async (channelNames, guildId) => {
@@ -101,5 +117,7 @@ module.exports = {
   createChannels,
   getOrCreateWebhooks,
   getOrCreateChannels,
-  sendFileAttachment
+  sendFile,
+  deleteChannel,
+  sendReaction
 }
