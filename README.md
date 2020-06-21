@@ -2,7 +2,7 @@
 This is an utils project to transfer Slack backup messages to Discord.
 
 ## Simple steps:
-1. Export Slack beckup messages.
+1. Export Slack backup messages.
 2. Create Discord Bot with proper permissions.
 3. Register Bot to the target Server.
 4. Install this project
@@ -56,7 +56,7 @@ Go to the project folder and run:
 >* excludeChannels: list of channel names to exclude (optional)
 >* mapChannels: map of origin channel to target channel name (optional)
 
-## Run the sript
+## Run the script
 Go to the project folder and run:
 
 `node src/index.js`
