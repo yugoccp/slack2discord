@@ -11,17 +11,21 @@ const dateFormat = date => {
 
 const concat = (x,y) => x.concat(y);
 
-const groupBy = (list, key) => {
-  return list.reduce((acc, elem) => {
-    (acc[elem[key]] = acc[elem[key]] || []).push(elem);
-    return acc;
+Array.prototype.groupBy = function(key) {
+  return this.reduce((acc, elem) => {
+    if (elem) {
+      (acc[elem[key]] = acc[elem[key]] || []).push(elem);
+      return acc;
+    }
   }, {});
 };
+
+Array.prototype.flatMap = function() {
+  return this.reduce(concat, []);
+}
 
 
 module.exports = {
   delay,
-  dateFormat,
-  concat,
-  groupBy
+  dateFormat
 }

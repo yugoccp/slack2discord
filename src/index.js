@@ -1,6 +1,6 @@
 const slackBackupReader = require('./slackBackupReader.js');
 const discordApi = require('./discordApi.js');
-const axios = require('axios');
+const slackApi = require('./slackApi.js');
 const utils = require('./utils.js');
 const { 
   guildId, 
@@ -9,39 +9,42 @@ const {
 
 const IMPORT_WEBHOOK_NAME = 'slack2discord';
 
-
 const app = async () => {
 
   const slackChannelNames = await slackBackupReader.getChannelNames();
+  const discordChannelNames = slackChannelNames.map(ch => mapChannels[ch]);
 
-  const discordChannels = await discordApi.getOrCreateChannels({ channelNames: slackChannelNames, guildId });
+  const discordChannels = await discordApi.getOrCreateChannels(discordChannelNames, guildId);
   const discordChannelIds = discordChannels.map(ch => ch.id);
+  const discordChannelByName = discordChannels.reduce((acc, ch) => ({ ...acc, [ch.name.toLowerCase()]: ch }), {});
   
-  const discordWebhooks = await discordApi.getOrCreateWebhooks({ channelIds: discordChannelIds, webhookName: IMPORT_WEBHOOK_NAME });
+  const discordWebhooks = await discordApi.getOrCreateWebhooks(discordChannelIds, IMPORT_WEBHOOK_NAME);
   const discordWebhooksByChannelId = discordWebhooks.reduce((acc, wh) => ({ ...acc, [wh.channel_id]: wh }), {});
   
-  const files = await slackBackupReader.getMessagesFiles({ channelNames: slackChannelNames }); 
   const usersById = await slackBackupReader.getUsersById();
-  const discordChannelByName = discordChannels.reduce((acc, ch) => ({ ...acc, [ch.name.toLowerCase()]: ch }), {});
+
+  const files = await slackBackupReader.getMessagesFiles(slackChannelNames); 
 
   for (const file of files) {
-    const msgs = (await slackBackupReader.getMessages(file.path))
+    const msgs = await slackBackupReader.getMessages(file.path)
 
     const formattedMsgs = msgs
-      .map(msg => replaceMentions(msg, usersById))
-      .map(msg => addUsername(msg, usersById))
-      .map((msg, i, arr) => addDateTime(msg, i > 0 ? arr[i - 1] : {}))
-      .map(addAvatar)
-      .map(splitLongMessage)
-      .reduce(utils.concat, [])
-      .map(toDiscordMessage);
+      .map(msg => hadleMentions(msg, usersById))
+      .map(msg => handleUsername(msg, usersById))
+      .map(handleTimestamp)
+      .map(handleAttachments)
+      .map((msg, i, arr) => handleDateTime(msg, i > 0 ? arr[i - 1] : {}))
+      .map(handleEmptyMessage)
+      .map(handleAvatar)
+      .map(handleLongMessage)
+      .flatMap();
 
-    const attachments = await Promise.all(
+    const fileAttachments = await Promise.all(
       msgs
         .filter(msg => msg.files)
-        .map(getAttachments)
+        .map(getFileAttachments)
     );
-    const attachmentByMessageId = utils.groupBy(attachments.reduce(utils.concat, []), 'messageId');
+    const fileAttachmentByMessageId = fileAttachments.flatMap().groupBy('messageId');
 
     const fileChannel = file.channel;
     const targetChannel = mapChannels[fileChannel] || fileChannel;
@@ -54,7 +57,7 @@ const app = async () => {
       const msg = formattedMsgs[i];
 
       try {
-        const resp = await discordApi.sendMessage({ data: msg, webhook });
+        const resp = await discordApi.sendMessage(msg, webhook);
         if (resp.headers['x-ratelimit-remaining'] == 0) {
           await utils.delay(2000);
         }
@@ -68,7 +71,8 @@ const app = async () => {
               await utils.delay(retryAfter);
             }
           } else {
-            console.error(`Error ${i}: ${file.path}`, err.response.data);
+            //console.error(`Error ${i}: ${file.path}`, err.response.data);
+            console.error(`Error ${i}: ${file.path}`, err);
             ++i;
           }
         } else {
@@ -78,18 +82,18 @@ const app = async () => {
       }
 
       try {
-        const msgAttachments = attachmentByMessageId[msg.client_msg_id];
-        if (msgAttachments) {
+        const msgFileAttachments = fileAttachmentByMessageId[msg.client_msg_id];
+        if (msgFileAttachments) {
           await Promise.all(
-            msgAttachments
+            msgFileAttachments
               .map(att => ({
                 username: msg.username,
                 file: att.file,
                 name: att.name
               }))
-              .map(data => discordApi.sendAttachment({ data, webhook }))
+              .map(data => discordApi.sendFileAttachment(data, webhook))
           );
-          attachmentByMessageId[msg.client_msg_id] = null;
+          fileAttachmentByMessageId[msg.client_msg_id] = null;
         }
       } catch (err) {
         if (err.response) {
@@ -102,48 +106,52 @@ const app = async () => {
   }
 }
 
-const toDiscordMessage = (message) => {
-  const { text, username, ts, avatar_url, attachments } = message;
-  return {
-    content: text,
-    username,
-    ts,
-    avatar_url,
-    attachments
-  }
+const handleTimestamp = message => {
+  message.ts = parseInt(message.ts);
+  return message;
 }
 
-const addAvatar = (message) => {
+const handleAttachments = message => {
+  if (message.attachments) {
+    message.attachments.forEach(att => {
+      att.ts = parseInt(message.ts);
+      att.color = undefined;
+      att.text = att.text && (att.text.substring(0, 2000) + '...');
+    });
+  }
+  return message;
+}
+
+const handleEmptyMessage = message => {
+  if (message.text.length == 0) {
+    message.text = '.';
+  }
+  return message;
+}
+
+const handleAvatar = message => {
   if (message.user_profile) {
     message.avatar_url = message.user_profile.image_72.replace(/\\\//g, '/')
   }
   return message;
 }
 
-const getAttachments = async message => {
-  const attachments = message.files.map(file => 
-    axios({
-      method: 'get',
-      url: file.url_private_download.replace(/\\\//g, '/'), 
-      responseType: 'arraybuffer'
-    })
+const getFileAttachments = async message => {
+  const fileAttachments = message.files.map(file => 
+    slackApi.getFileAttachment(file.url_private_download.replace(/\\\//g, '/'))
     .then(resp => ({
       messageId: message.client_msg_id,
       file: resp.data,
       name: file.name
     }))
     .catch(err => {
-      if (err.response) {
-        console.error(`Error sending attachment:`, err.response.data);
-      } else {
-        console.error(err);
-      }
+      console.error(`Error getting attachment:`, err);
     })
   )
-  return Promise.all(attachments);
+  return await Promise.all(fileAttachments);
 }
 
-const splitLongMessage = (message) => {
+const handleLongMessage = message => {
   const maxLength = 2000;
   if (message.text.length > maxLength) {
     const textChunks = message.text.match(new RegExp('.{1,' + maxLength + '}', 'g'));
@@ -156,7 +164,7 @@ const splitLongMessage = (message) => {
   return [message];
 }
 
-const addDateTime = (message, previousMessage) => {
+const handleDateTime = (message, previousMessage) => {
   if (message.username != previousMessage.username) {
     const dateStr = utils.dateFormat(new Date(message.ts*1000));
     message.text = '`' + dateStr + '`\n' + message.text;
@@ -164,12 +172,12 @@ const addDateTime = (message, previousMessage) => {
   return message;
 }
 
-const addUsername = (message, usersById) => {
+const handleUsername = (message, usersById) => {
   message.username = findUsername(usersById, message.user);
   return message;
 }
 
-const replaceMentions = (message, usersById) => {
+const hadleMentions = (message, usersById) => {
   message.text = message.text.replace(/<@\w+>/g, match => findUsername(usersById, match.substring(2, match.length - 1)));
   return message;
 }

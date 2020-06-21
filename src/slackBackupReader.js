@@ -26,7 +26,7 @@ const getChannelNames = async () => {
     .map(dir => dir.name);
 }
 
-const getMessagesFiles = async ({ channelNames }) => {
+const getMessagesFiles = async (channelNames) => {
   const messageFiles = await Promise.all(
     channelNames.map(channelName => {
       return getChannelFiles(channelName)
