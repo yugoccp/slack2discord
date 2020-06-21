@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-const getFileAttachments = async url => {
+const getFile = async url => {
     return axios({
       url,
       method: 'get',
@@ -9,5 +9,5 @@ const getFileAttachments = async url => {
 }
 
 module.exports = {
-  getFileAttachments
+  getFile
 }

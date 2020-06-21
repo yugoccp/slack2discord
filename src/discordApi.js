@@ -63,7 +63,7 @@ const createChannelsWebhook = async (channelIds, webhookName) => {
 const sendMessage = async (data, webhook) => {
   // return await axios.post(`/webhooks/${webhook.id}/${webhook.token}/slack`, data);
   const webhookClient = new WebhookClient(webhook.id, webhook.token);
-  return webhookClient.send(data.text, data);
+  return webhookClient.sendSlackMessage(data);
 }
 
 const sendReaction = async (channelId, messageId, emoji) => {

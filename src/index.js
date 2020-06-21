@@ -28,79 +28,46 @@ const app = async () => {
   for (const file of files) {
     const msgs = await slackBackupReader.getMessages(file.path)
 
-    const formattedMsgs = msgs
+    const files = await Promise.all(
+      msgs
+        .filter(msg => msg.files)
+        .map(msg => getFiles(msg, usersById))
+    );
+    const filesByMessageId = files.flatMap().groupBy('messageId');
+
+    const discordMsgs = msgs
       .map(msg => hadleMentions(msg, usersById))
       .map(msg => handleUsername(msg, usersById))
+      .map((msg, i, arr) => handleDateTime(msg, i > 0 ? arr[i - 1] : {}))
       .map(handleTimestamp)
       .map(handleAttachments)
-      .map((msg, i, arr) => handleDateTime(msg, i > 0 ? arr[i - 1] : {}))
       .map(handleEmptyMessage)
       .map(handleAvatar)
       .map(handleLongMessage)
-      .flatMap();
-
-    const fileAttachments = await Promise.all(
-      msgs
-        .filter(msg => msg.files)
-        .map(getFileAttachments)
-    );
-    const fileAttachmentByMessageId = fileAttachments.flatMap().groupBy('messageId');
+      .flatMap()
+      .map(msg => ({
+        id: msg.client_msg_id,
+        avatarURL: msg.avatarURL,
+        username: msg.username,
+        text: msg.text,
+        attachments: msg.attachments
+      }));
 
     const fileChannel = file.channel;
     const targetChannel = mapChannels[fileChannel] || fileChannel;
     const channel = discordChannelByName[targetChannel.toLowerCase()];
     const webhook = discordWebhooksByChannelId[channel.id];
 
-    let i = 0;
-    while(i < formattedMsgs.length) {
-      
-      const msg = formattedMsgs[i];
-
+    for(let i = 0; i < discordMsgs.length; ++i) {
+      const msg = discordMsgs[i];
       try {
-        const resp = await discordApi.sendMessage(msg, webhook);
-        if (resp.headers['x-ratelimit-remaining'] == 0) {
-          await utils.delay(2000);
-        }
-        ++i;
-      } catch (err) {
-        if (err.response) {
-          if (err.response.status == 429) {
-            const retryAfter = err.response.headers['retry-after']
-            if (retryAfter) {
-              console.log(`Too many requests. Retry after: ${retryAfter}ms.`);
-              await utils.delay(retryAfter);
-            }
-          } else {
-            //console.error(`Error ${i}: ${file.path}`, err.response.data);
-            console.error(`Error ${i}: ${file.path}`, err);
-            ++i;
-          }
-        } else {
-          console.error(err);
-        }
-        
-      }
-
-      try {
-        const msgFileAttachments = fileAttachmentByMessageId[msg.client_msg_id];
-        if (msgFileAttachments) {
-          await Promise.all(
-            msgFileAttachments
-              .map(att => ({
-                username: msg.username,
-                file: att.file,
-                name: att.name
-              }))
-              .map(data => discordApi.sendFileAttachment(data, webhook))
-          );
-          fileAttachmentByMessageId[msg.client_msg_id] = null;
+        await discordApi.sendMessage(msg, webhook);
+        if (filesByMessageId[msg.id]) {
+          await Promise.all(filesByMessageId[msg.id].map(f => discordApi.sendFile(f, webhook)));
+          filesByMessageId[msg.id] = undefined; // do not resend file
         }
       } catch (err) {
-        if (err.response) {
-          console.error(`Error ${i}: ${file.path}`, err.response.data);
-        } else {
-          console.error(err);
-        }
+        console.error(`Error ${i}: ${file.path}\n${err}`);
       }
     }
   }
@@ -131,16 +98,17 @@ const handleEmptyMessage = message => {
 
 const handleAvatar = message => {
   if (message.user_profile) {
-    message.avatar_url = message.user_profile.image_72.replace(/\\\//g, '/')
+    message.avatarURL = message.user_profile.image_72.replace(/\\\//g, '/')
   }
   return message;
 }
 
-const getFileAttachments = async message => {
-  const fileAttachments = message.files.map(file => 
-    slackApi.getFileAttachment(file.url_private_download.replace(/\\\//g, '/'))
+const getFiles = async (message, usersById) => {
+  const files = message.files.map(file => 
+    slackApi.getFile(file.url_private_download.replace(/\\\//g, '/'))
     .then(resp => ({
       messageId: message.client_msg_id,
+      username: findUsername(usersById, message.user),
       file: resp.data,
       name: file.name
     }))
@@ -148,7 +116,7 @@ const getFileAttachments = async message => {
       console.error(`Error getting attachment:`, err);
     })
   )
-  return await Promise.all(fileAttachments);
+  return await Promise.all(files);
 }
 
 const handleLongMessage = message => {
