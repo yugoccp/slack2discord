@@ -72,10 +72,9 @@ const sendReaction = async (channelId, messageId, emoji) => {
 }
 
 const sendFile = async (data, webhook) => {
-  const file = Buffer.from(data.file);
+  const file = Buffer.from(data.attachment);
   const attachment = new MessageAttachment(file, data.name);
-  const webhookClient = new WebhookClient(webhook.id, webhook.token);
-  await webhookClient.send(data.name, {
+  await webhook.send(data.name, {
     username: data.username,
     files: [attachment]
   });

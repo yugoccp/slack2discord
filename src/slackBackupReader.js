@@ -2,9 +2,9 @@ const fs = require('fs').promises;
 const { resolve } = require('path');
 const config = require('../config.json');
 
-const { backupPath, includeChannels=[], excludeChannels=[] } = config;
+const { backupPath } = config;
 
-const getUsersById = async () => {
+const getUsersById = async (backupPath) => {
   const file = await fs.readFile(`${backupPath}/users.json`);
   return JSON.parse(file).reduce((acc, value) => {
     acc[value.id] = value;
@@ -17,12 +17,11 @@ const getChannels = async () => {
   return JSON.parse(file);
 }
 
-const getChannelNames = async () => {
+const getChannelNames = async (backupPath) => {
   const slackBackupDir = await fs.readdir(`${backupPath}`, { withFileTypes: true });
-  return slackBackupDir.filter(dir => dir.isDirectory()) // only directories
+  return slackBackupDir
+    .filter(dir => dir.isDirectory()) // only directories
     .filter(dir => !dir.name.startsWith('.')) // exclude hidden directories
-    .filter(dir => !includeChannels.length || includeChannels.find(ch => ch === dir.name)) // include configured channels
-    .filter(dir => !excludeChannels.length || !excludeChannels.find(ch => ch === dir.name)) // exclude configured channels
     .map(dir => dir.name);
 }
 
@@ -55,6 +54,7 @@ const getMessages = async path => {
 module.exports = {
   getUsersById,
   getChannels,
+  getChannelFiles,
   getMessagesFiles,
   getMessages,
   getChannelNames

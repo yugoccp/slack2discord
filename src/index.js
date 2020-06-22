@@ -4,84 +4,132 @@ const slackApi = require('./slackApi.js');
 const utils = require('./utils.js');
 const { 
   botToken,
-  guildId, 
+  guildId,
+  backupPath,
+  parentChannel,
+  includeChannels = [],
+  excludeChannels = [],
   mapChannels = {}
 } = require('../config.json');
 
-const { Client, Message, MessageEmbed } = require('discord.js');
+const { 
+  Client, 
+  MessageEmbed, 
+  MessageAttachment, 
+  WebhookClient 
+} = require('discord.js');
 
 const IMPORT_WEBHOOK_NAME = 'slack2discord';
 
 const app = async () => {
   
-  const client = new Client();
-  await client.login(botToken);
+  const client = new Client();  
+  client.once('ready', async () => {
+    
+    const usersById = await slackBackupReader.getUsersById(backupPath);
+    const slackChannelNames = (await slackBackupReader.getChannelNames(backupPath))
+      .filter(name => !includeChannels.length || includeChannels.find(ch => ch === name)) // include configured channels
+      .filter(name => !excludeChannels.length || !excludeChannels.find(ch => ch === name)) // exclude configured channels
+    
+    const discordParentChannel = client.channels.cache.find(ch => ch.name === parentChannel);
 
-  const slackChannelNames = await slackBackupReader.getChannelNames();
-  const discordChannelNames = slackChannelNames.map(ch => mapChannels[ch]);
+    for (let i = 0; i < slackChannelNames.length; i++) {
+      const slackChannelName = slackChannelNames[i];
+      const discordChannelName = mapChannels[slackChannelName] || slackChannelName;
 
-  const discordChannels = await discordApi.getOrCreateChannels(discordChannelNames, guildId);
-  const discordChannelIds = discordChannels.map(ch => ch.id);
-  const discordChannelByName = discordChannels.reduce((acc, ch) => ({ ...acc, [ch.name.toLowerCase()]: ch }), {});
-  
-  const discordWebhooks = await discordApi.getOrCreateWebhooks(discordChannelIds, IMPORT_WEBHOOK_NAME);
-  const discordWebhooksByChannelId = discordWebhooks.reduce((acc, wh) => ({ ...acc, [wh.channel_id]: wh }), {});
-  
-  const usersById = await slackBackupReader.getUsersById();
+      console.log(`Importing from ${slackChannelName} to ${discordChannelName} channel...`);
 
-  const files = await slackBackupReader.getMessagesFiles(slackChannelNames); 
-
-  for (const file of files) {
-    const msgs = await slackBackupReader.getMessages(file.path)
-
-    const files = await Promise.all(
-      msgs
-        .filter(msg => msg.files)
-        .map(msg => getFiles(msg, usersById))
-    );
-    const filesByMessageId = files.flatMap().groupBy('messageId');
-
-    const discordMsgs = msgs
-      .map(msg => hadleMentions(msg, usersById))
-      .map(msg => handleUsername(msg, usersById))
-      .map((msg, i, arr) => handleDateTime(msg, i > 0 ? arr[i - 1] : {}))
-      .map(handleTimestamp)
-      .map(handleAttachments)
-      .map(handleEmptyMessage)
-      .map(handleAvatar)
-      .map(handleReactions)
-      .map(handleLongMessage)
-      .flatMap()
-      .map(msg => ({
-        id: msg.client_msg_id,
-        reactions: msg.reactions,
-        avatarURL: msg.avatarURL,
-        username: msg.username,
-        content: msg.text,
-        embeds: msg.embeds,
-        files: (filesByMessageId[msg.client_msg_id] || []).map(f => f.file)
-      }));
-
-    const fileChannel = file.channel;
-    const targetChannel = mapChannels[fileChannel] || fileChannel;
-    const channel = discordChannelByName[targetChannel.toLowerCase()];
-    const webhook = discordWebhooksByChannelId[channel.id];
-
-    const textChannel = client.channels.cache.get(channel.id);
-
-    for(let i = 0; i < discordMsgs.length; ++i) {
-      const msg = discordMsgs[i];
-      try {
-        const resp = await discordApi.sendMessage(msg, webhook);
-        const message = new Message(client, resp, textChannel);
-        if (msg.reactions) {
-          msg.reactions.forEach(r => message.react(r));
-        }
-      } catch (err) {
-        console.error(`Error ${i}: ${file.path}\n${err}`);
+      console.log(`Get or create ${discordChannelName} channel...`);
+      let channel = client.channels.cache.find(ch => ch.name === discordChannelName);
+      if (!channel) {
+        const guild = client.guilds.cache.get(guildId);
+        channel = await guild.channels.create(discordChannelName, { type: 'text', parent: discordParentChannel });
       }
+
+      console.log(`Get or create ${discordChannelName}/${IMPORT_WEBHOOK_NAME} Webhook...`);
+      const webhooks = await channel.fetchWebhooks();
+      let webhook = webhooks.find(wh => wh.name == IMPORT_WEBHOOK_NAME);
+      if (!webhook) {
+        const resp = await discordApi.createWebhook(channel.id, IMPORT_WEBHOOK_NAME);
+        webhook = new WebhookClient(resp.id, resp.token);
+      }
+
+      const slackFiles = await slackBackupReader.getChannelFiles(slackChannelName); 
+
+      for (const slackFile of slackFiles) {
+
+        console.log(`Parsing file content: ${slackFile}...`);
+        const slackMessages = await slackBackupReader.getMessages(slackFile);
+        const filesByMessageId = await fetchFilesByMessageId(slackMessages);
+  
+        const discordMessages = slackMessages
+          .map(msg => hadleMentions(msg, usersById))
+          .map(msg => handleUsername(msg, usersById))
+          .map((msg, i, arr) => handleDateTime(msg, i > 0 ? arr[i - 1] : {}))
+          .map(handleTimestamp)
+          .map(handleAttachments)
+          .map(handleEmptyMessage)
+          .map(handleAvatar)
+          .map(handleReactions)
+          .map(handleLongMessage)
+          .flatMap()
+          .map(msg => ({
+            id: msg.client_msg_id,
+            reactions: msg.reactions,
+            avatarURL: msg.avatarURL,
+            username: msg.username,
+            content: msg.text,
+            embeds: msg.embeds,
+            files: (filesByMessageId[msg.client_msg_id] || []).map(f => {
+              const file = Buffer.from(f.attachment);
+              return new MessageAttachment(file, f.name);  
+            })
+          }));
+
+          console.log(`Sending message to ${discordChannelName}...`)
+          for(let i = 0; i < discordMessages.length; ++i) {
+            const discordMessage = discordMessages[i];
+            const { content, reactions, id, ...messageOptions }  = discordMessage;
+            try {
+              const message = await webhook.send(content, messageOptions);
+              
+              if (reactions) {
+                console.log('Send reactions...')
+                reactions.forEach(r => message.react(r));
+              }
+              
+            } catch (err) {
+              console.error(`Error sending message at ${i}...`, err);
+            }
+          }
+      } 
     }
-  }
+  });
+
+  await client.login(botToken);
+}
+
+const fetchFilesByMessageId = async (messages) => {
+  return (await Promise.all(
+    messages
+      .filter(msg => msg.files)
+      .map(msg => fetchFiles(msg))
+  )).flatMap().groupBy('messageId');
+}
+
+const fetchFiles = async (message) => {
+  const files = message.files.map(file => 
+    slackApi.getFile(utils.unescapeUrl(file.url_private_download))
+    .then(resp => ({
+      messageId: message.client_msg_id,
+      attachment: resp.data,
+      name: file.name
+    }))
+    .catch(err => {
+      console.error(`Error getting attachment:`, err);
+    })
+  )
+  return await Promise.all(files);
 }
 
 const handleReactions = message => {
@@ -126,22 +174,6 @@ const handleAvatar = message => {
     message.avatarURL = utils.unescapeUrl(message.user_profile.image_72);
   }
   return message;
-}
-
-const getFiles = async (message, usersById) => {
-  const files = message.files.map(file => 
-    slackApi.getFile(utils.unescapeUrl(file.url_private_download))
-    .then(resp => ({
-      messageId: message.client_msg_id,
-      username: findUsername(usersById, message.user),
-      file: resp.data,
-      name: file.name
-    }))
-    .catch(err => {
-      console.error(`Error getting attachment:`, err);
-    })
-  )
-  return await Promise.all(files);
 }
 
 const handleLongMessage = message => {
