@@ -32,6 +32,7 @@ const app = async () => {
       .filter(name => !excludeChannels.length || !excludeChannels.find(ch => ch === name)) // exclude configured channels
     
     const discordParentChannel = client.channels.cache.find(ch => ch.name === parentChannel);
+    const guild = client.guilds.cache.get(guildId);
 
     for (let i = 0; i < slackChannelNames.length; i++) {
       const slackChannelName = slackChannelNames[i];
@@ -42,7 +43,6 @@ const app = async () => {
       console.log(`Get or create ${discordChannelName} channel...`);
       let channel = client.channels.cache.find(ch => ch.name === discordChannelName);
       if (!channel) {
-        const guild = client.guilds.cache.get(guildId);
         channel = await guild.channels.create(discordChannelName, { type: 'text', parent: discordParentChannel });
       }
 
@@ -50,8 +50,7 @@ const app = async () => {
       const webhooks = await channel.fetchWebhooks();
       let webhook = webhooks.find(wh => wh.name == IMPORT_WEBHOOK_NAME);
       if (!webhook) {
-        const resp = await discordApi.createWebhook(channel.id, IMPORT_WEBHOOK_NAME);
-        webhook = new WebhookClient(resp.id, resp.token);
+        webhook = await channel.createWebhook(IMPORT_WEBHOOK_NAME);
       }
 
       const slackFiles = await slackBackupReader.getChannelFiles(slackChannelName); 
