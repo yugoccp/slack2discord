@@ -16,7 +16,6 @@ const {
   Client, 
   MessageEmbed, 
   MessageAttachment, 
-  WebhookClient 
 } = require('discord.js');
 
 const IMPORT_WEBHOOK_NAME = 'slack2discord';
@@ -41,22 +40,15 @@ const app = async () => {
       console.log(`Importing from ${slackChannelName} to ${discordChannelName} channel...`);
 
       console.log(`Get or create ${discordChannelName} channel...`);
-      let channel = client.channels.cache.find(ch => ch.name === discordChannelName);
-      if (!channel) {
-        channel = await guild.channels.create(discordChannelName, { type: 'text', parent: discordParentChannel });
-      }
+      const channel = await discordApi.getOrCreateChannel(client, guild, discordChannelName, discordParentChannel);
 
       console.log(`Get or create ${discordChannelName}/${IMPORT_WEBHOOK_NAME} Webhook...`);
-      const webhooks = await channel.fetchWebhooks();
-      let webhook = webhooks.find(wh => wh.name == IMPORT_WEBHOOK_NAME);
-      if (!webhook) {
-        webhook = await channel.createWebhook(IMPORT_WEBHOOK_NAME);
-      }
+      const webhook = await discordApi.getOrCreateWebhook(channel, IMPORT_WEBHOOK_NAME);
 
+      console.log(`Read Slack ${slackChannelName} channel backup files...`);
       const slackFiles = await slackBackupReader.getChannelFiles(slackChannelName); 
 
       for (const slackFile of slackFiles) {
-
         console.log(`Parsing file content: ${slackFile}...`);
         const slackMessages = await slackBackupReader.getMessages(slackFile);
         const filesByMessageId = await fetchFilesByMessageId(slackMessages);
@@ -73,7 +65,6 @@ const app = async () => {
           .map(handleLongMessage)
           .flatMap()
           .map(msg => ({
-            id: msg.client_msg_id,
             reactions: msg.reactions,
             avatarURL: msg.avatarURL,
             username: msg.username,
@@ -86,17 +77,14 @@ const app = async () => {
           }));
 
           console.log(`Sending message to ${discordChannelName}...`)
-          for(let i = 0; i < discordMessages.length; ++i) {
-            const discordMessage = discordMessages[i];
-            const { content, reactions, id, ...messageOptions }  = discordMessage;
+          for(const discordMessage of discordMessages) {
+            const { content, reactions, ...messageOptions }  = discordMessage;
             try {
               const message = await webhook.send(content, messageOptions);
-              
               if (reactions) {
                 console.log('Send reactions...')
                 reactions.forEach(r => message.react(r));
               }
-              
             } catch (err) {
               console.error(`Error sending message at ${i}...`, err);
             }
