@@ -3,13 +3,19 @@ const discordApi = require('./discordApi.js');
 const slackApi = require('./slackApi.js');
 const utils = require('./utils.js');
 const { 
+  botToken,
   guildId, 
   mapChannels = {}
 } = require('../config.json');
 
+const { Client, Message, MessageEmbed } = require('discord.js');
+
 const IMPORT_WEBHOOK_NAME = 'slack2discord';
 
 const app = async () => {
+  
+  const client = new Client();
+  await client.login(botToken);
 
   const slackChannelNames = await slackBackupReader.getChannelNames();
   const discordChannelNames = slackChannelNames.map(ch => mapChannels[ch]);
@@ -43,14 +49,17 @@ const app = async () => {
       .map(handleAttachments)
       .map(handleEmptyMessage)
       .map(handleAvatar)
+      .map(handleReactions)
       .map(handleLongMessage)
       .flatMap()
       .map(msg => ({
         id: msg.client_msg_id,
+        reactions: msg.reactions,
         avatarURL: msg.avatarURL,
         username: msg.username,
-        text: msg.text,
-        attachments: msg.attachments
+        content: msg.text,
+        embeds: msg.embeds,
+        files: (filesByMessageId[msg.client_msg_id] || []).map(f => f.file)
       }));
 
     const fileChannel = file.channel;
@@ -58,19 +67,28 @@ const app = async () => {
     const channel = discordChannelByName[targetChannel.toLowerCase()];
     const webhook = discordWebhooksByChannelId[channel.id];
 
+    const textChannel = client.channels.cache.get(channel.id);
+
     for(let i = 0; i < discordMsgs.length; ++i) {
       const msg = discordMsgs[i];
       try {
-        await discordApi.sendMessage(msg, webhook);
-        if (filesByMessageId[msg.id]) {
-          await Promise.all(filesByMessageId[msg.id].map(f => discordApi.sendFile(f, webhook)));
-          filesByMessageId[msg.id] = undefined; // do not resend file
+        const resp = await discordApi.sendMessage(msg, webhook);
+        const message = new Message(client, resp, textChannel);
+        if (msg.reactions) {
+          msg.reactions.forEach(r => message.react(r));
         }
       } catch (err) {
         console.error(`Error ${i}: ${file.path}\n${err}`);
       }
     }
   }
+}
+
+const handleReactions = message => {
+  if (message.reactions) {
+    message.reactions = message.reactions.map(r => slackApi.emojiToUnicode(`:${r.name}:`));
+  }
+  return message;
 }
 
 const handleTimestamp = message => {
@@ -80,10 +98,17 @@ const handleTimestamp = message => {
 
 const handleAttachments = message => {
   if (message.attachments) {
-    message.attachments.forEach(att => {
-      att.ts = parseInt(message.ts);
-      att.color = undefined;
-      att.text = att.text && (att.text.substring(0, 2000) + '...');
+    message.embeds = message.attachments.map(att => {
+      const embed = new MessageEmbed()
+      embed.setColor("D0D0D0");
+      embed.setURL(att.from_url || att.original_url);
+      if (att.footer) embed.setFooter(att.footer, att.footer_icon);
+      if (att.title) embed.setTitle(att.title);
+      if (att.author_name) embed.setAuthor(att.author_name, att.author_icon);
+      if (att.ts) embed.setTimestamp(new Date(parseInt(att.ts)*1000).toISOString());
+      if (att.text) embed.setDescription(att.text.substring(0, 2000));
+      if (att.image_url) embed.setImage(att.image_url);
+      return embed;
     });
   }
   return message;
@@ -98,14 +123,14 @@ const handleEmptyMessage = message => {
 
 const handleAvatar = message => {
   if (message.user_profile) {
-    message.avatarURL = message.user_profile.image_72.replace(/\\\//g, '/')
+    message.avatarURL = utils.unescapeUrl(message.user_profile.image_72);
   }
   return message;
 }
 
 const getFiles = async (message, usersById) => {
   const files = message.files.map(file => 
-    slackApi.getFile(file.url_private_download.replace(/\\\//g, '/'))
+    slackApi.getFile(utils.unescapeUrl(file.url_private_download))
     .then(resp => ({
       messageId: message.client_msg_id,
       username: findUsername(usersById, message.user),

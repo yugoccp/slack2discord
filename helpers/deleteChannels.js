@@ -5,8 +5,6 @@ const deleteChannelNames = [];
 
 const deleteChannels = async () => {
 
-  
-
   const discordChannels = await discordApi.getChannels(guildId);
   const deleteDiscordChannels = discordChannels;
 

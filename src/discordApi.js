@@ -1,9 +1,6 @@
 const axios = require('axios');
-const { WebhookClient, MessageAttachment, Client } = require('discord.js');
+const { WebhookClient, MessageAttachment } = require('discord.js');
 const { botToken, parentChannel } = require('../config.json');
-
-const client = new Client();
-client.login(botToken);
 
 axios.defaults.baseURL = 'https://discord.com/api/v6/';
 axios.defaults.headers.common['Authorization'] = `Bot ${botToken}`;
@@ -61,15 +58,14 @@ const createChannelsWebhook = async (channelIds, webhookName) => {
 }
 
 const sendMessage = async (data, webhook) => {
-  // return await axios.post(`/webhooks/${webhook.id}/${webhook.token}/slack`, data);
   const webhookClient = new WebhookClient(webhook.id, webhook.token);
-  return webhookClient.sendSlackMessage(data);
+  return webhookClient.send(data.content, data);
 }
 
 const sendReaction = async (channelId, messageId, emoji) => {
   console.log({channelId, messageId, emoji});
   try {
-    await axios.put(`/channels/${channelId}/messages/${messageId}/reactions/${emoji}/@me`)
+    await axios.put(encodeURI(`/channels/${channelId}/messages/${messageId}/reactions/${emoji}/@me`))
   } catch (err) {
     console.log(err);
   }

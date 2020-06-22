@@ -11,6 +11,13 @@ const dateFormat = date => {
 
 const concat = (x,y) => x.concat(y);
 
+const unescapeUrl = url => {
+  if (url) {
+    return url.replace(/\\\//g, '/');
+  }
+  return '';
+}
+
 Array.prototype.groupBy = function(key) {
   return this.reduce((acc, elem) => {
     if (elem) {
@@ -24,8 +31,8 @@ Array.prototype.flatMap = function() {
   return this.reduce(concat, []);
 }
 
-
 module.exports = {
   delay,
-  dateFormat
+  dateFormat,
+  unescapeUrl
 }
