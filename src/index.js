@@ -2,6 +2,7 @@ const slackBackupReader = require('./slackBackupReader.js');
 const discordApi = require('./discordApi.js');
 const slackApi = require('./slackApi.js');
 const utils = require('./utils.js');
+const logger = require('./logger.js');
 const { 
   botToken,
   guildId,
@@ -38,22 +39,22 @@ const app = async () => {
       const slackChannelName = slackChannelNames[i];
       const discordChannelName = mapChannels[slackChannelName] || slackChannelName;
 
-      console.log(`Importing from ${slackChannelName} to ${discordChannelName} channel...`);
+      logger.info(`Importing from ${slackChannelName} to ${discordChannelName} channel...`);
 
-      console.log(`Get or create ${discordChannelName} channel...`);
+      logger.info(`Get or create ${discordChannelName} channel...`);
       const channel = await discordApi.getOrCreateChannel(client, guild, discordChannelName, discordParentChannel);
 
-      console.log(`Get or create ${discordChannelName}/${IMPORT_WEBHOOK_NAME} Webhook...`);
+      logger.info(`Get or create ${discordChannelName}/${IMPORT_WEBHOOK_NAME} Webhook...`);
       const webhook = await discordApi.getOrCreateWebhook(channel, IMPORT_WEBHOOK_NAME);
 
-      console.log(`Read Slack ${slackChannelName} channel backup files...`);
+      logger.info(`Read Slack ${slackChannelName} channel backup files...`);
       const slackFiles = await slackBackupReader.getChannelFiles(backupPath, slackChannelName); 
 
       for (const slackFile of slackFiles) {
-        console.log(`Parsing file content: ${slackFile}...`);
+        logger.info(`Parsing file content: ${slackFile}...`);
         const slackMessages = await slackBackupReader.getMessages(slackFile);
         const filesByTimestamp = await fetchFilesByTimestamp(slackMessages);
-  
+
         const discordMessages = slackMessages
           .map(handleEmptyMessage)
           .map(msg => handleUsername(msg, usersById))
@@ -75,17 +76,17 @@ const app = async () => {
               files: msg.files
           }));
 
-          console.log(`Sending message to ${discordChannelName}...`)
+          logger.info(`Sending message to ${discordChannelName}...`)
           for(const discordMessage of discordMessages) {
             const { reactions, ...messageData }  = discordMessage;
             try {
               const message = await discordApi.sendMessage(messageData, webhook);
               if (reactions) {
-                console.log('Send reactions...')
+                logger.info('Send reactions...')
                 reactions.forEach(r => message.react(r));
               }
             } catch (err) {
-              console.error(`Error sending message at ${i}...`, err);
+              logger.error(`Error sending message at ${i}...`, err);
             }
           }
       } 
@@ -227,7 +228,7 @@ const handleUserMentions = (message, usersById) => {
 const findUsername = (usersById, userId) => {
   const user = usersById[userId];
   if (!user) {
-    console.error(`User not found: ${userId}`);
+    logger.error(`User not found: ${userId}`);
     return userId;
   }
   return user.profile.display_name_normalized || user.profile.real_name_normalized || user.name || userId
