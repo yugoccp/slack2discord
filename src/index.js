@@ -212,6 +212,7 @@ const handleUserMentions = (message, usersById) => {
   message.text = message.text.replace(/<@\w+>/g, match => {
     return '@' + findUsername(usersById, match.substring(2, match.length - 1));
   });
+  message.text = message.text.replace(/<!everyone>/g, match => '@everyone');
   return message;
 }
 
