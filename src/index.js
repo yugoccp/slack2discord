@@ -26,7 +26,8 @@ const app = async () => {
   client.once('ready', async () => {
     
     const usersById = await slackBackupReader.getUsersById(backupPath);
-    const slackChannelNames = (await slackBackupReader.getChannelNames(backupPath))
+
+    const slackChannelNames = (await slackBackupReader.getChannelDirNames(backupPath))
       .filter(name => !includeChannels.length || includeChannels.find(ch => ch === name)) // include configured channels
       .filter(name => !excludeChannels.length || !excludeChannels.find(ch => ch === name)) // exclude configured channels
     
@@ -46,41 +47,39 @@ const app = async () => {
       const webhook = await discordApi.getOrCreateWebhook(channel, IMPORT_WEBHOOK_NAME);
 
       console.log(`Read Slack ${slackChannelName} channel backup files...`);
-      const slackFiles = await slackBackupReader.getChannelFiles(slackChannelName); 
+      const slackFiles = await slackBackupReader.getChannelFiles(backupPath, slackChannelName); 
 
       for (const slackFile of slackFiles) {
         console.log(`Parsing file content: ${slackFile}...`);
         const slackMessages = await slackBackupReader.getMessages(slackFile);
-        const filesByMessageId = await fetchFilesByMessageId(slackMessages);
+        const filesByTimestamp = await fetchFilesByTimestamp(slackMessages);
   
         const discordMessages = slackMessages
-          .map(msg => hadleMentions(msg, usersById))
-          .map(msg => handleUsername(msg, usersById))
-          .map((msg, i, arr) => handleDateTime(msg, i > 0 ? arr[i - 1] : {}))
-          .map(handleTimestamp)
-          .map(handleAttachments)
           .map(handleEmptyMessage)
+          .map(msg => handleUsername(msg, usersById))
+          .map(msg => handleUserMentions(msg, usersById))
+          .map(msg => handleChannelMentions(msg))
+          .map(msg => handleFiles(msg, filesByTimestamp))
+          .map((msg, i, arr) => handleDateTime(msg, i > 0 ? arr[i - 1] : {}))
+          .map(handleAttachments)
           .map(handleAvatar)
           .map(handleReactions)
           .map(handleLongMessage)
           .flatMap()
           .map(msg => ({
-            reactions: msg.reactions,
-            avatarURL: msg.avatarURL,
-            username: msg.username,
-            content: msg.text,
-            embeds: msg.embeds,
-            files: (filesByMessageId[msg.client_msg_id] || []).map(f => {
-              const file = Buffer.from(f.attachment);
-              return new MessageAttachment(file, f.name);  
-            })
+              reactions: msg.reactions,
+              avatarURL: msg.avatarURL,
+              username: msg.username,
+              content: msg.text,
+              embeds: msg.embeds,
+              files: msg.files
           }));
 
           console.log(`Sending message to ${discordChannelName}...`)
           for(const discordMessage of discordMessages) {
-            const { content, reactions, ...messageOptions }  = discordMessage;
+            const { reactions, ...messageData }  = discordMessage;
             try {
-              const message = await webhook.send(content, messageOptions);
+              const message = await discordApi.sendMessage(messageData, webhook);
               if (reactions) {
                 console.log('Send reactions...')
                 reactions.forEach(r => message.react(r));
@@ -96,38 +95,44 @@ const app = async () => {
   await client.login(botToken);
 }
 
-const fetchFilesByMessageId = async (messages) => {
+const fetchFilesByTimestamp = async (messages) => {
   return (await Promise.all(
     messages
       .filter(msg => msg.files)
       .map(msg => fetchFiles(msg))
-  )).flatMap().groupBy('messageId');
+  ))
+  .flatMap()
+  .map(f => {
+    const file = Buffer.from(f.attachment);
+    return new MessageAttachment(file, f.name)
+  })
+  .groupBy('ts');
 }
 
 const fetchFiles = async (message) => {
   const files = message.files.map(file => 
     slackApi.getFile(utils.unescapeUrl(file.url_private_download))
-    .then(resp => ({
-      messageId: message.client_msg_id,
-      attachment: resp.data,
-      name: file.name
-    }))
-    .catch(err => {
-      console.error(`Error getting attachment:`, err);
-    })
+      .then(resp => ({
+        ts: message.ts,
+        attachment: resp.data,
+        name: file.name
+      }))
+      .catch(err => {
+        console.error(`Error getting attachment:`, err);
+      })
   )
   return await Promise.all(files);
+}
+
+const handleFiles = (message, filesByTimestamp) => {
+  message.files = filesByTimestamp[message.ts];
+  return message;
 }
 
 const handleReactions = message => {
   if (message.reactions) {
     message.reactions = message.reactions.map(r => slackApi.emojiToUnicode(`:${r.name}:`));
   }
-  return message;
-}
-
-const handleTimestamp = message => {
-  message.ts = parseInt(message.ts);
   return message;
 }
 
@@ -166,11 +171,17 @@ const handleAvatar = message => {
 const handleLongMessage = message => {
   const maxLength = 2000;
   if (message.text.length > maxLength) {
+    const { username } = message;
     const textChunks = message.text.match(new RegExp('.{1,' + maxLength + '}', 'g'));
-    return textChunks.map(tc => ({
-      ...message,
-      text: tc
-    }));
+    return textChunks.map((tc, i) => i == 0 ? 
+      {
+        ...message,
+        text: tc
+      } : {
+        username,
+        text: tc
+      }
+    );
   }
 
   return [message];
@@ -189,8 +200,18 @@ const handleUsername = (message, usersById) => {
   return message;
 }
 
-const hadleMentions = (message, usersById) => {
-  message.text = message.text.replace(/<@\w+>/g, match => findUsername(usersById, match.substring(2, match.length - 1)));
+const handleChannelMentions = (message) => {
+  message.text = message.text.replace(/<#\S+>/g, match => {
+    const separatorIndex = match.indexOf('|') + 1;
+    return '@' + match.substring(separatorIndex, match.length - 1);
+  });
+  return message;
+}
+
+const handleUserMentions = (message, usersById) => {
+  message.text = message.text.replace(/<@\w+>/g, match => {
+    return '@' + findUsername(usersById, match.substring(2, match.length - 1));
+  });
   return message;
 }
 

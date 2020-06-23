@@ -1,8 +1,5 @@
 const fs = require('fs').promises;
 const { resolve } = require('path');
-const config = require('../config.json');
-
-const { backupPath } = config;
 
 const getUsersById = async (backupPath) => {
   const file = await fs.readFile(`${backupPath}/users.json`);
@@ -12,12 +9,15 @@ const getUsersById = async (backupPath) => {
   }, {});
 }
 
-const getChannels = async () => {
+const getChannelsById = async (backupPath) => {
   const file = await fs.readFile(`${backupPath}/channels.json`);
-  return JSON.parse(file);
+  return JSON.parse(file).reduce((acc, ch) => {
+    acc[ch.id] = ch;
+    return acc;
+  }, {});
 }
 
-const getChannelNames = async (backupPath) => {
+const getChannelDirNames = async (backupPath) => {
   const slackBackupDir = await fs.readdir(`${backupPath}`, { withFileTypes: true });
   return slackBackupDir
     .filter(dir => dir.isDirectory()) // only directories
@@ -25,22 +25,7 @@ const getChannelNames = async (backupPath) => {
     .map(dir => dir.name);
 }
 
-const getMessagesFiles = async (channelNames) => {
-  const messageFiles = await Promise.all(
-    channelNames.map(channelName => {
-      return getChannelFiles(channelName)
-        .then(files => files.map(f => ({
-              channel: channelName,
-              path: f
-            }))
-        )
-      })
-  );
-
-  return messageFiles.reduce((acc, value) => acc.concat(value), []);
-}
-
-const getChannelFiles = async channel => {
+const getChannelFiles = async (backupPath, channel) => {
   const channelPath = resolve(backupPath, channel);
   const files = await fs.readdir(channelPath);
   return files.map(f => resolve(channelPath, f));
@@ -53,9 +38,9 @@ const getMessages = async path => {
 
 module.exports = {
   getUsersById,
-  getChannels,
+  getChannelsById,
+  getChannelDirNames,
   getChannelFiles,
-  getMessagesFiles,
   getMessages,
-  getChannelNames
+  getChannelsById
 }
