@@ -1,16 +1,16 @@
 const discordApi = require('../src/discordApi.js');
 const { guildId } = require('../config.json');
 
-const deleteChannelNames = [];
+const deleteChannelNames = ["general-slack"];
 
 const deleteChannels = async () => {
 
   const discordChannels = await discordApi.getChannels(guildId);
-  const deleteDiscordChannels = discordChannels;
+  let deleteDiscordChannels = discordChannels;
 
   if (deleteChannelNames.length > 0) {
     const deleteChannelNamesSet = new Set(deleteChannelNames);
-    deleteDiscordChannels = discordChannels.filter(ch => !deleteChannelNamesSet(ch.name));
+    deleteDiscordChannels = discordChannels.filter(ch => deleteChannelNamesSet.has(ch.name));
   }
 
   for (let i = 0; i< deleteDiscordChannels.length; ++i) {
