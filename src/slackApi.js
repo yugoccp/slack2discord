@@ -2,14 +2,13 @@ const axios = require('axios');
 const punycode = require('punycode');
 const emoji_data = require('../rsc/emoji.json');
 
-const slackClient = axios.create();
+const slackClient = axios.create({});
 
 const getFile = async url => {
     return slackClient({
       url,
       method: 'get',
-      responseType: 'arraybuffer',
-      hea
+      responseType: 'arraybuffer'
     });
 }
 
