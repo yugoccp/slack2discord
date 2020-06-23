@@ -95,37 +95,45 @@ const app = async () => {
   await client.login(botToken);
 }
 
+const getMessageKey = (message) => {
+  const user = message.user || 'user';
+  return `${user}-${parseInt(message.ts * 1000)}`;
+}
+
 const fetchFilesByTimestamp = async (messages) => {
   return (await Promise.all(
     messages
       .filter(msg => msg.files)
       .map(msg => fetchFiles(msg))
   ))
+  .filter(f => f)
   .flatMap()
-  .map(f => {
-    const file = Buffer.from(f.attachment);
-    return new MessageAttachment(file, f.name)
-  })
-  .groupBy('ts');
+  .groupBy('key');
 }
 
 const fetchFiles = async (message) => {
   const files = message.files.map(file => 
     slackApi.getFile(utils.unescapeUrl(file.url_private_download))
       .then(resp => ({
-        ts: message.ts,
+        key: getMessageKey(message),
         attachment: resp.data,
         name: file.name
       }))
       .catch(err => {
-        console.error(`Error getting attachment:`, err);
+        logger.error(`Error getting attachment:`, err);
       })
   )
   return await Promise.all(files);
 }
 
 const handleFiles = (message, filesByTimestamp) => {
-  message.files = filesByTimestamp[message.ts];
+  const key = getMessageKey(message);
+  if (filesByTimestamp[key]) {
+    message.files = filesByTimestamp[key].map(f => {
+      const file = Buffer.from(f.attachment);
+      return new MessageAttachment(file, f.name)
+    });
+  }
   return message;
 }
 
