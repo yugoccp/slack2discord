@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const Entities = require('html-entities').AllHtmlEntities;
 const utils = require('./utils.js');
 const slackApi = require('./slackApi');
 const logger = require('./logger');
@@ -12,12 +13,13 @@ const {
 } = require('../config.json');
 
 const OUTPUT_PATH = '../out';
+const entities = new Entities();
 
 const parseFiles = async () => {
 
   const usersById = await fileReader.getUsersById(backupPath);
 
-  const slackChannelNames = (await fileReader.getSlackDirNames(backupPath))
+  const slackChannelNames = (await fileReader.getSlackDirs(backupPath))
     .filter(name => !includeChannels.length || includeChannels.find(ch => ch === name)) // include configured channels
     .filter(name => !excludeChannels.length || !excludeChannels.find(ch => ch === name)); // exclude configured channels
   
@@ -49,11 +51,12 @@ const parse = (slackMessages, usersById) => {
   return slackMessages
           .map(handleEmptyMessage)
           .map(msg => handleUsername(msg, usersById))
-          .map(msg => handleUserMentions(msg, usersById))
-          .map(msg => handleChannelMentions(msg))
+          .map(msg => handleHtmlEntities(msg))
+          .map(msg => { msg.text = replaceUserMentions(msg.text, usersById); return msg;})
+          .map(msg => { msg.text = replaceChannelMentions(msg.text); return msg;})
           .map(msg => handleFiles(msg))
           .map((msg, i, arr) => handleDateTime(msg, i > 0 ? arr[i - 1] : {}))
-          .map(handleAttachments)
+          .map(msg => handleAttachments(msg, usersById))
           .map(handleAvatar)
           .map(handleReactions)
           .map(handleLongMessage)
@@ -70,6 +73,13 @@ const parse = (slackMessages, usersById) => {
 
 const getFileUrl = (file) => {
   return file.url_private_download || file.url_private
+}
+
+const handleHtmlEntities = (message) => {
+  if (message.text) {
+    message.text = entities.decode(message.text);
+  }
+  return message;
 }
 
 const handleFiles = (message) => {
@@ -89,7 +99,7 @@ const handleReactions = message => {
   return message;
 }
 
-const handleAttachments = message => {
+const handleAttachments = (message, usersById) => {
   if (message.attachments) {
     message.embeds = message.attachments.map(att => {
       const embed = new Discord.MessageEmbed()
@@ -100,8 +110,13 @@ const handleAttachments = message => {
       if (att.footer) embed.setFooter(att.footer, att.footer_icon);
       if (att.title) embed.setTitle(att.title);
       if (att.author_name) embed.setAuthor(att.author_name, att.author_icon);
-      if (att.text) embed.setDescription(att.text.substring(0, 2000));
       if (att.ts) embed.setTimestamp(new Date(parseInt(att.ts)*1000).toISOString());
+      if (att.text) {
+        let description = entities.decode(att.text);
+        description = replaceChannelMentions(description);
+        description = replaceUserMentions(description, usersById);
+        embed.setDescription(description.substring(0, 2000));
+      }
       return embed;
     });
   }
@@ -154,20 +169,22 @@ const handleUsername = (message, usersById) => {
   return message;
 }
 
-const handleChannelMentions = (message) => {
-  message.text = message.text.replace(/<#\S+>/g, match => {
+const replaceChannelMentions = text => {
+  let result = text || '';
+  result = result.replace(/<#\S+>/g, match => {
     const separatorIndex = match.indexOf('|') + 1;
     return '@' + match.substring(separatorIndex, match.length - 1);
   });
-  return message;
+  return result;
 }
 
-const handleUserMentions = (message, usersById) => {
-  message.text = message.text.replace(/<@\w+>/g, match => {
+const replaceUserMentions = (text, usersById) => {
+  let result = text || '';
+  result = result.replace(/<@\w+>/g, match => {
     return '@' + findUsername(usersById, match.substring(2, match.length - 1));
   });
-  message.text = message.text.replace(/<!everyone>/g, match => '@everyone');
-  return message;
+  result = result.replace(/<!everyone>/g, _ => '@everyone');
+  return result;
 }
 
 const findUsername = (usersById, userId) => {

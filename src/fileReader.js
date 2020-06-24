@@ -1,11 +1,13 @@
 const fs = require('fs');
-const { resolve } = require('path');
+const path = require('path');
 const { 
   includeChannels = [],
   excludeChannels = [],
 } = require('../config.json');
+const logger = require('./logger');
 
 const OUTPUT_PATH = '../out';
+const DONE_PATH = '../done';
 
 const getUsersById = async (backupPath) => {
   const file = await fs.promises.readFile(`${backupPath}/users.json`);
@@ -33,7 +35,7 @@ const getDirNames = async(path) => {
     .map(dir => dir.name);
 }
 
-const getSlackDirNames = async (backupPath) => {
+const getSlackDirs = async (backupPath) => {
   return await getDirNames(`${backupPath}`, { withFileTypes: true });
 }
 
@@ -42,15 +44,15 @@ const getOutputDirs = async () => {
 }
 
 const getSlackFiles = async (backupPath, channel) => {
-  const channelPath = resolve(backupPath, channel);
+  const channelPath = path.resolve(backupPath, channel);
   const files = await fs.promises.readdir(channelPath);
-  return files.map(f => resolve(channelPath, f));
+  return files.map(f => path.resolve(channelPath, f));
 }
 
 const getOutputFiles = async (dir) => {
-  const channelPath = resolve(`${__dirname}/${OUTPUT_PATH}`, dir);
+  const channelPath = path.resolve(`${__dirname}/${OUTPUT_PATH}`, dir);
   const files = await fs.promises.readdir(channelPath);
-  return files.map(f => resolve(channelPath, f));
+  return files.map(f => path.resolve(channelPath, f));
 }
 
 const getMessages = async path => {
@@ -58,13 +60,27 @@ const getMessages = async path => {
   return JSON.parse(data);
 }
 
+const createDoneFolder = async folderName => {
+  await fs.promises.mkdir(`${__dirname}/${DONE_PATH}/${folderName}`, { recursive: true });
+}
+
+const moveToDone = async (folderName, filePath) => {
+  const filename = path.basename(filePath)
+  const donePath = `${__dirname}/${DONE_PATH}/${folderName}/${filename}`;
+  fs.rename(filePath, donePath, function (err) {
+    if (err) throw err
+    logger.info(`Successfully moved to ${donePath}`)
+  })
+}
+
 module.exports = {
   getUsersById,
   getChannelsById,
-  getSlackDirNames,
+  getSlackDirs,
   getSlackFiles,
-  getMessages,
-  getChannelsById,
   getOutputDirs,
-  getOutputFiles
+  getOutputFiles,
+  getMessages,
+  moveToDone,
+  createDoneFolder
 }

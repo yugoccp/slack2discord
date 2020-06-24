@@ -2,5 +2,6 @@ node_modules/
 backups/
 out/
 logs/
+done/
 config.json
 logs/debug.log

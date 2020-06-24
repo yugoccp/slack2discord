@@ -29,6 +29,8 @@ const sendToDiscord = async (client) => {
     .filter(name => !excludeChannels.length || !excludeChannels.find(ch => ch === name)); // exclude configured channels;
 
   for (const outputDir of outputDirs) {
+
+    await fileReader.createDoneFolder(outputDir);
     
     const discordChannelName = mapChannels[outputDir] || outputDir;
     logger.info(`Sending from ${outputDir} to ${discordChannelName} channel...`);
@@ -40,7 +42,7 @@ const sendToDiscord = async (client) => {
     const webhook = await discordApi.getOrCreateWebhook(channel, IMPORT_WEBHOOK_NAME);
     
     const outputFiles = await fileReader.getOutputFiles(outputDir);
-
+    
     for (const outputFile of outputFiles) {
 
       const discordMessages = await fileReader.getMessages(outputFile);
@@ -70,6 +72,10 @@ const sendToDiscord = async (client) => {
           logger.error(`Error sending message ${i} from ${filename}...`, err);
         }
       }
+
+      // Move to done
+      fileReader.moveToDone(outputDir, outputFile);
+
     } 
   }
 }
