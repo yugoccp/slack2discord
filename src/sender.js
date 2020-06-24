@@ -1,4 +1,4 @@
-const fs = require('fs').promises;
+const path = require('path');
 const discordApi = require('./discordApi.js');
 const slackApi = require('./slackApi.js');
 const fileReader = require('./fileReader.js');
@@ -28,9 +28,8 @@ const sendToDiscord = async (client) => {
     .filter(name => !includeChannels.length || includeChannels.find(ch => ch === name)) // include configured channels
     .filter(name => !excludeChannels.length || !excludeChannels.find(ch => ch === name)); // exclude configured channels;
 
-  for (let i = 0; i < outputDirs.length; i++) {
+  for (const outputDir of outputDirs) {
     
-    const outputDir = outputDirs[i];
     const discordChannelName = mapChannels[outputDir] || outputDir;
     logger.info(`Sending from ${outputDir} to ${discordChannelName} channel...`);
     
@@ -45,11 +44,17 @@ const sendToDiscord = async (client) => {
     for (const outputFile of outputFiles) {
 
       const discordMessages = await fileReader.getMessages(outputFile);
+
+      const filename = path.basename(outputFile);
       
-      logger.info(`Sending message to ${discordChannelName}...`)
-      for(const discordMessage of discordMessages) {
+      for (let i = 0; i < discordMessages.length; i++) {
+        logger.info(`Sending message ${i} from ${filename}...`);
+        
+        const discordMessage = discordMessages[i];
         const { reactions, files, ...messageData }  = discordMessage;
+
         try {
+
           if (files) {
               messageData.files = await handleFiles(files);
           }
@@ -60,8 +65,9 @@ const sendToDiscord = async (client) => {
             logger.info('Send reactions...')
             reactions.forEach(r => message.react(r));
           }
+
         } catch (err) {
-          logger.error(`Error sending message at ${i}...`, err);
+          logger.error(`Error sending message ${i} from ${filename}...`, err);
         }
       }
     } 
