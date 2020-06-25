@@ -1,11 +1,11 @@
 const fs = require('fs');
 const path = require('path');
-const Entities = require('html-entities').AllHtmlEntities;
 const utils = require('./utils.js');
 const slackApi = require('./slackApi');
 const logger = require('./logger');
 const Discord = require('discord.js');
 const fileReader = require('./fileReader.js');
+const Entities = require('html-entities').AllHtmlEntities;
 const { 
   backupPath,
   includeChannels = [],
@@ -51,11 +51,12 @@ const parse = (slackMessages, usersById) => {
   return slackMessages
           .map(handleEmptyMessage)
           .map(msg => handleUsername(msg, usersById))
-          .map(msg => handleHtmlEntities(msg))
+          .map(msg => { msg.text = replacePipe(msg.text); return msg;})
+          .map(msg => { msg.text = decodeHtmlEntities(msg.text); return msg;})
           .map(msg => { msg.text = replaceUserMentions(msg.text, usersById); return msg;})
           .map(msg => { msg.text = replaceChannelMentions(msg.text); return msg;})
-          .map(msg => handleFiles(msg))
           .map((msg, i, arr) => handleDateTime(msg, i > 0 ? arr[i - 1] : {}))
+          .map(msg => handleFiles(msg))
           .map(msg => handleAttachments(msg, usersById))
           .map(handleAvatar)
           .map(handleReactions)
@@ -75,16 +76,14 @@ const getFileUrl = (file) => {
   return file.url_private_download || file.url_private
 }
 
-const handleHtmlEntities = (message) => {
-  if (message.text) {
-    message.text = entities.decode(message.text);
-  }
-  return message;
+const decodeHtmlEntities = text => {
+  return entities.decode(text);
 }
 
 const handleFiles = (message) => {
   if (message.files) {
     message.files = message.files.map(f => ({
+      id: f.id,
       name: f.name,
       url: getFileUrl(f)
     }));
@@ -112,7 +111,9 @@ const handleAttachments = (message, usersById) => {
       if (att.author_name) embed.setAuthor(att.author_name, att.author_icon);
       if (att.ts) embed.setTimestamp(new Date(parseInt(att.ts)*1000).toISOString());
       if (att.text) {
-        let description = entities.decode(att.text);
+        let description = att.text;
+        description = replacePipe(description);
+        description = decodeHtmlEntities(description);
         description = replaceChannelMentions(description);
         description = replaceUserMentions(description, usersById);
         embed.setDescription(description.substring(0, 2000));
@@ -169,6 +170,10 @@ const handleUsername = (message, usersById) => {
   return message;
 }
 
+const replacePipe = text => {
+  return text.replace(/(\%7C|\|)/gm, ' ');
+}
+
 const replaceChannelMentions = text => {
   let result = text || '';
   result = result.replace(/<#\S+>/g, match => {
@@ -183,7 +188,7 @@ const replaceUserMentions = (text, usersById) => {
   result = result.replace(/<@\w+>/g, match => {
     return '@' + findUsername(usersById, match.substring(2, match.length - 1));
   });
-  result = result.replace(/<!everyone>/g, _ => '@everyone');
+  result = result.replace(/<!\S+>/g, match => `@${match.substring(2, match.length - 1)}`);
   return result;
 }
 

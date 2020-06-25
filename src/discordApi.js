@@ -1,5 +1,4 @@
 const axios = require('axios');
-const { WebhookClient } = require('discord.js');
 const { botToken } = require('../config.json');
 
 const discordClient = axios.create({

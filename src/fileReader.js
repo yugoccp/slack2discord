@@ -1,10 +1,10 @@
 const fs = require('fs');
 const path = require('path');
+const logger = require('./logger');
 const { 
   includeChannels = [],
   excludeChannels = [],
 } = require('../config.json');
-const logger = require('./logger');
 
 const OUTPUT_PATH = '../out';
 const DONE_PATH = '../done';
