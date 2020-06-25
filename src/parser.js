@@ -51,10 +51,10 @@ const parse = (slackMessages, usersById) => {
   return slackMessages
           .map(handleEmptyMessage)
           .map(msg => handleUsername(msg, usersById))
-          .map(msg => { msg.text = replacePipe(msg.text); return msg;})
           .map(msg => { msg.text = decodeHtmlEntities(msg.text); return msg;})
-          .map(msg => { msg.text = replaceUserMentions(msg.text, usersById); return msg;})
           .map(msg => { msg.text = replaceChannelMentions(msg.text); return msg;})
+          .map(msg => { msg.text = replaceUserMentions(msg.text, usersById); return msg;})
+          .map(msg => { msg.text = replacePipe(msg.text); return msg;})
           .map((msg, i, arr) => handleDateTime(msg, i > 0 ? arr[i - 1] : {}))
           .map(msg => handleFiles(msg))
           .map(msg => handleAttachments(msg, usersById))
@@ -112,10 +112,10 @@ const handleAttachments = (message, usersById) => {
       if (att.ts) embed.setTimestamp(new Date(parseInt(att.ts)*1000).toISOString());
       if (att.text) {
         let description = att.text;
-        description = replacePipe(description);
         description = decodeHtmlEntities(description);
         description = replaceChannelMentions(description);
         description = replaceUserMentions(description, usersById);
+        description = replacePipe(description);
         embed.setDescription(description.substring(0, 2000));
       }
       return embed;
