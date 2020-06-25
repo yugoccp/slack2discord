@@ -90,7 +90,7 @@ const sendToDiscord = async (client) => {
       }
 
       // Move to done
-      //fileReader.moveToDone(outputDir, outputFile);
+      fileReader.moveToDone(outputDir, outputFile);
 
     } 
   }
