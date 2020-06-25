@@ -7,7 +7,8 @@ This is an utils project to transfer Slack backup messages to Discord.
 3. Register Bot to the target Server.
 4. Install this project
 5. Configure script (botToken, server and messages path)
-6. Run the script!
+6. Parse your messages.
+7. Send your message to Discord!
 
 ## Export Slack backup messages
 Please follow the official Slack instructions to export and download your Workspace messages:
@@ -56,10 +57,19 @@ Go to the project folder and run:
 >* excludeChannels: list of channel names to exclude (optional)
 >* mapChannels: map of origin channel to target channel name (optional)
 
-## Run the script
-Go to the project folder and run:
+## Parse your messages
+Go to the project root folder and run:
 
-`node src/index.js`
+`node src/parser.js`
+
+This will create an folder named `/out` with the parsed messages.
+
+## Run the script
+Go to the project root folder and run:
+
+`node src/sender.js`
+
+This script will red files from `/out` and send to Discord. Each succesful file migration are moved to `/done` folder.
 
 ## Discord Bot Creation Reference Guide
 https://discord.com/developers/docs/topics/oauth2#bots
