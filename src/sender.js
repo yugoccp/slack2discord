@@ -20,6 +20,10 @@ const {
 
 const IMPORT_WEBHOOK_NAME = 'slack2discord';
 
+/**
+ * Send files to discord
+ * @param {Client} client 
+ */
 const sendToDiscord = async (client) => {
 
   const discordParentChannel = client.channels.cache.find(ch => ch.name === parentChannel);
@@ -56,7 +60,7 @@ const sendToDiscord = async (client) => {
       .map(om => om.messages).flatMap()
       .filter(msg => msg.files)
       .map(msg => msg.files).flatMap()
-      .map(handleFile);
+      .map(fetchMessageFiles);
 
     const filesById = (await Promise.all(fetchFiles)).reduce((acc, f) => ({...acc, [f.id]: f.attachment}), {});
 
@@ -96,7 +100,11 @@ const sendToDiscord = async (client) => {
   }
 }
 
-const handleFile = async file => {
+/**
+ * Fetch files.
+ * @param {Object} file 
+ */
+const fetchMessageFiles = async file => {
   return await slackApi.getFile(file.url)
     .then(resp => ({
       id: file.id, 

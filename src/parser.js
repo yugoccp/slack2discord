@@ -39,7 +39,7 @@ const parseFiles = async () => {
       logger.info(`Parsing file content: ${slackFile}...`);
 
       const slackMessages = await fileReader.getMessages(slackFile);
-      const processedMessages = parse(slackMessages, usersById);
+      const processedMessages = parseMessages(slackMessages, usersById);
       outputFile.write(JSON.stringify(processedMessages, (_, value) => {
         if (value !== null) return value;
       }, 2));
@@ -47,60 +47,88 @@ const parseFiles = async () => {
   }
 }
 
-const parse = (slackMessages, usersById) => {
-  return slackMessages
-          .map(handleEmptyMessage)
-          .map(msg => handleUsername(msg, usersById))
-          .map(msg => { msg.text = decodeHtmlEntities(msg.text); return msg;})
-          .map(msg => { msg.text = replaceChannelMentions(msg.text); return msg;})
-          .map(msg => { msg.text = replaceUserMentions(msg.text, usersById); return msg;})
-          .map(msg => { msg.text = replacePipe(msg.text); return msg;})
-          .map((msg, i, arr) => handleDateTime(msg, i > 0 ? arr[i - 1] : {}))
-          .map(msg => handleFiles(msg))
-          .map(msg => handleAttachments(msg, usersById))
-          .map(handleAvatar)
-          .map(handleReactions)
-          .map(handleLongMessage)
-          .flatMap()
-          .map(msg => ({
-              reactions: msg.reactions,
-              avatarURL: msg.avatarURL,
-              username: msg.username,
-              content: msg.text,
-              embeds: msg.embeds,
-              files: msg.files
-          }));
+/**
+ * Parse Slack messages to Discord message data.
+ * @param {Array} slackMessages 
+ * @param {Object} usersById 
+ */
+const parseMessages = (slackMessages, usersById) => {
+  return slackMessages.reduce((acc, msg)=> {
+    const prevUser = acc.length > 0 ? acc[acc.length -1].username : null;
+    const contents = getContents(prevUser, msg, usersById);
+    const username = getUsername(msg, usersById);
+    
+    const msgData = {
+      username,
+      content: contents.pop(),
+      reactions: getReactions(msg),
+      avatarURL: getAvatar(msg),
+      files: getFiles(msg),
+      embeds: getEmbeds(msg, usersById)
+    };
+
+    const restMsgData = contents.map(content => ({
+        username,
+        content
+    }));
+
+    return [...acc, ...restMsgData, msgData];
+
+  }, []);
 }
 
-const getFileUrl = (file) => {
-  return file.url_private_download || file.url_private
-}
-
+/**
+ * Decode HTML entities.
+ * @param {string} text 
+ */
 const decodeHtmlEntities = text => {
   return entities.decode(text);
 }
 
-const handleFiles = (message) => {
+/**
+ * Retrieve array of message texts.
+ * @param {string} prevUser 
+ * @param {Object} message 
+ * @param {Object} usersById 
+ */
+const getContents = (prevUser, message, usersById) => {
+  let content = addDateTime(prevUser, message);
+  content = handleText(message.text, usersById);
+  return splitLongText(content);
+}
+
+/**
+ * Retrieve object with Slack files URL and id.
+ * @param {Object} message 
+ */
+const getFiles = (message) => {
   if (message.files) {
-    message.files = message.files.map(f => ({
-      id: f.id,
-      name: f.name,
-      url: getFileUrl(f)
+    return message.files.map(file => ({
+      id: file.id,
+      name: file.name,
+      url: file.url_private_download || file.url_private
     }));
   }
-  return message;
 }
 
-const handleReactions = message => {
+/**
+ * Retrieve array of unicode emojis.
+ * @param {Object} message 
+ */
+const getReactions = message => {
   if (message.reactions) {
-    message.reactions = message.reactions.map(r => slackApi.emojiToUnicode(`:${r.name}:`));
+    return message.reactions.map(r => slackApi.emojiToUnicode(`:${r.name}:`));
   }
-  return message;
 }
 
-const handleAttachments = (message, usersById) => {
+/**
+ * Retrieve array of DIscord Embeds.
+ * @param {Object} message 
+ * @param {Object} usersById 
+ */
+const getEmbeds = (message, usersById) => {
   if (message.attachments) {
-    message.embeds = message.attachments.map(att => {
+    return message.attachments.map(att => {
       const embed = new Discord.MessageEmbed()
       embed.setColor("D0D0D0");
       embed.setURL(att.from_url || att.original_url);
@@ -111,69 +139,83 @@ const handleAttachments = (message, usersById) => {
       if (att.author_name) embed.setAuthor(att.author_name, att.author_icon);
       if (att.ts) embed.setTimestamp(new Date(parseInt(att.ts)*1000).toISOString());
       if (att.text) {
-        let description = att.text;
-        description = decodeHtmlEntities(description);
-        description = replaceChannelMentions(description);
-        description = replaceUserMentions(description, usersById);
-        description = replacePipe(description);
+        let description = handleText(att.text, usersById);
         embed.setDescription(description.substring(0, 2000));
       }
       return embed;
     });
   }
-  return message;
 }
 
-const handleEmptyMessage = message => {
-  if (message.text.length == 0) {
-    message.text = '.';
-  }
-  return message;
+/**
+ * Retrieves handled text.
+ * @param {string} text 
+ * @param {Object} usersById 
+ */
+const handleText = (text, usersById) => {
+  let handledText = text.length == 0 ? '.' : text
+  handledText = decodeHtmlEntities(handledText);
+  handledText = replaceChannelMentions(handledText);
+  handledText = replaceUserMentions(handledText, usersById);
+  handledText = replacePipe(handledText);
+  return handledText;
 }
 
-const handleAvatar = message => {
+/**
+ * Retrive avatar URL.
+ * @param {Object} message 
+ */
+const getAvatar = message => {
   if (message.user_profile) {
-    message.avatarURL = utils.unescapeUrl(message.user_profile.image_72);
+    return utils.unescapeUrl(message.user_profile.image_72);
   }
-  return message;
 }
 
-const handleLongMessage = message => {
+/**
+ * Split text into max length size chunks.
+ * @param {string} text 
+ */
+const splitLongText = text => {
   const maxLength = 2000;
-  if (message.text.length > maxLength) {
-    const { username } = message;
-    const textChunks = message.text.match(new RegExp('.{1,' + maxLength + '}', 'g'));
-    return textChunks.map((tc, i) => i == 0 ? 
-      {
-        ...message,
-        text: tc
-      } : {
-        username,
-        text: tc
-      }
-    );
+  if (text.length > maxLength) {
+    return text.match(new RegExp('.{1,' + maxLength + '}', 'g'));
   }
-
-  return [message];
+  return [text];
 }
 
-const handleDateTime = (message, previousMessage) => {
-  if (message.username != previousMessage.username) {
+/**
+ * Add date at the beginning of a different user message.
+ * @param {string} prevUser 
+ * @param {Object} message 
+ */
+const addDateTime = (prevUser, message) => {
+  if (message.username != prevUser) {
     const dateStr = utils.dateFormat(new Date(message.ts*1000));
-    message.text = '`' + dateStr + '`\n' + message.text;
+    return '`' + dateStr + '`\n' + message.text;
   }
-  return message;
 }
 
-const handleUsername = (message, usersById) => {
-  message.username = findUsername(usersById, message.user);
-  return message;
+/**
+ * Retrieve the message username.
+ * @param {Object} message 
+ * @param {Object} usersById 
+ */
+const getUsername = (message, usersById) => {
+  return findUsername(usersById, message.user);
 }
 
+/**
+ * Replace pipes to blank spaces.
+ * @param {string} text 
+ */
 const replacePipe = text => {
   return text.replace(/(\%7C|\|)/gm, ' ');
 }
 
+/**
+ * Replace channel mentions to channel name.
+ * @param {string} text 
+ */
 const replaceChannelMentions = text => {
   let result = text || '';
   result = result.replace(/<#\S+>/g, match => {
@@ -183,6 +225,11 @@ const replaceChannelMentions = text => {
   return result;
 }
 
+/**
+ * Replace users mentions to username.
+ * @param {string} text 
+ * @param {Object} usersById 
+ */
 const replaceUserMentions = (text, usersById) => {
   let result = text || '';
   result = result.replace(/<@\w+>/g, match => {
@@ -192,6 +239,11 @@ const replaceUserMentions = (text, usersById) => {
   return result;
 }
 
+/**
+ * Retrieve username by Slack user Id.
+ * @param {Object} usersById 
+ * @param {string} userId 
+ */
 const findUsername = (usersById, userId) => {
   const user = usersById[userId];
   if (!user) {

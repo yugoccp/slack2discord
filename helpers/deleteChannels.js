@@ -3,24 +3,29 @@ const { guildId } = require('../config.json');
 
 const deleteChannelNames = ["general-slack"];
 
-const deleteChannels = async () => {
+const deleteChannels = async (client) => {
 
-  const discordChannels = await discordApi.getChannels(guildId);
-  let deleteDiscordChannels = discordChannels;
-
-  if (deleteChannelNames.length > 0) {
-    const deleteChannelNamesSet = new Set(deleteChannelNames);
-    deleteDiscordChannels = discordChannels.filter(ch => deleteChannelNamesSet.has(ch.name));
-  }
+  const deleteChannelNamesSet = new Set(deleteChannelNames);
+  const discordChannels = await discordApi.getChannels(client, guildId);
+  const deleteDiscordChannels = discordChannels.filter(ch => deleteChannelNamesSet.has(ch.name));
 
   for (let i = 0; i< deleteDiscordChannels.length; ++i) {
     const ch = deleteDiscordChannels[i];
     try {
-      await discordApi.deleteChannel(ch.id);
+      await discordApi.deleteChannel(client, ch.id);
     } catch (err) {
       console.error(err);
     }
   }
 }
 
-deleteChannels();
+const app = async () => {
+  
+  const client = new Client();  
+
+  client.once('ready', async () => {
+    await deleteChannels(client);
+  });
+
+  await client.login(botToken);
+}
