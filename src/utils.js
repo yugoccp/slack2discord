@@ -9,8 +9,6 @@ const dateFormat = date => {
   return `${DD < 10 ? '0' + DD : DD}/${MM < 10 ? '0' + MM : MM}/${YYYY} ${hh < 10 ? '0' + hh : hh}:${mm < 10 ? '0' + mm : mm}`;
 }
 
-const concat = (x,y) => x.concat(y);
-
 const unescapeUrl = url => {
   if (url) {
     return url.replace(/\\\//g, '/');
@@ -28,7 +26,7 @@ Array.prototype.groupBy = function(key) {
 };
 
 Array.prototype.flatMap = function() {
-  return this.reduce(concat, []);
+  return this.reduce((acc, item) => acc.concat(item), []);
 }
 
 module.exports = {
