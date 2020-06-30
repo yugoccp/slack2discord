@@ -4,6 +4,10 @@ const emoji_data = require('../rsc/emoji.json');
 
 const slackClient = axios.create({});
 
+/**
+ * Fetch Slack attachments files
+ * @param {string} url 
+ */
 const getFile = async url => {
     return slackClient({
       url,
@@ -12,6 +16,11 @@ const getFile = async url => {
     });
 }
 
+/**
+ * Parse Slack emojis to unicode.
+ * Taken from: https://github.com/aaronpk/Slack-IRC-Gateway/commit/541cc464e60e6146c305afd5efc521f6553f690c
+ * @param {string} text 
+ */
 const emojiToUnicode = text => {
 
   var emoji_re = /\:([a-zA-Z0-9\-_\+]+)\:(?:\:([a-zA-Z0-9\-_\+]+)\:)?/g;
