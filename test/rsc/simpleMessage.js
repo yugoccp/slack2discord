@@ -1,7 +1,7 @@
 const message = 
 {
     "type": "message",
-    "text": "Ut sed nihil veniam enim suscipit. Aut quia aut cum sapiente dolor perspiciatis quo. Animi quibusdam eligendi iusto quia aut ipsum. Et veritatis deserunt consequatur reiciendis blanditiis aspernatur velit sunt atque. Officia aut delectus et iste nihil quo.",
+    "text": "Ut <@userId> sed <#channelId|channelName> nihil <!everybody> veniam enim suscipit.\n Aut quia aut cum sapiente dolor perspiciatis quo. Animi quibusdam eligendi iusto quia aut ipsum. Et veritatis deserunt consequatur reiciendis blanditiis aspernatur velit sunt atque.",
     "user": 'userId',
     "ts": "1520248100.000387",
     "user_profile": {

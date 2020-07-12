@@ -2,7 +2,7 @@ const faker = require('faker');
 const message = 
 {
     "type": "message",
-    "text": faker.random.alphaNumeric(5000),
+    "text": "Ut <@userId> sed <#channelId|channelName> nihil <!everybody> veniam enim suscipit.\n" + faker.random.alphaNumeric(5000),
     "user": 'userId',
     "ts": "1520248100.000387",
     "user_profile": {

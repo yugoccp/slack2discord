@@ -53,7 +53,7 @@ const decodeHtmlEntities = text => {
 const getContents = (message, usersById, withDatetime) => {
   let content = withDatetime ? addDateTime(message) : message.text;
   content = handleText(content, usersById);
-  return splitLongText(content, 2000);
+  return utils.splitText(content, 2000);
 }
 
 /**
@@ -131,17 +131,6 @@ const getAvatar = message => {
 }
 
 /**
- * Split text into max length size chunks.
- * @param {string} text 
- */
-const splitLongText = (text, maxLength) => {
-  if (text.length > maxLength) {
-    return text.match(new RegExp('(.|[\r\n]){1,' + maxLength + '}', 'g'));
-  }
-  return [text];
-}
-
-/**
  * Add date at the beginning of a different user message.
  * @param {string} prevUser 
  * @param {Object} message 
@@ -214,8 +203,5 @@ const findUsername = (userId, usersById) => {
 }
 
 module.exports = {
-  parseMessages,
-  splitLongText,
-  replaceUserMentions,
-  replaceChannelMentions
+  parseMessages
 }
