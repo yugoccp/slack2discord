@@ -1,12 +1,6 @@
 const fs = require('fs');
 const path = require('path');
 const logger = require('./logger');
-const { 
-  includeChannels = [],
-  excludeChannels = [],
-} = require('../config.json');
-
-const OUTPUT_PATH = '../out';
 const DONE_PATH = '../done';
 
 /**
@@ -42,45 +36,17 @@ const getDirNames = async(path) => {
   return outputDir
     .filter(dir => dir.isDirectory()) // only directories
     .filter(dir => !dir.name.startsWith('.')) // exclude hidden directories
-    .filter(dir => !includeChannels.length || includeChannels.find(ch => ch === dir.name)) // include configured channels
-    .filter(dir => !excludeChannels.length || !excludeChannels.find(ch => ch === dir.name)) // exclude configured channels;
     .map(dir => dir.name);
-}
-
-/**
- * Retrieve Slack messages channel directories name.
- * @param {string} backupPath 
- */
-const getSlackDirs = async (backupPath) => {
-  return await getDirNames(`${backupPath}`, { withFileTypes: true });
-}
-
-/**
- * Retrieve Output messages directories name.
- */
-const getOutputDirs = async () => {
-  return await getDirNames(`${__dirname}/${OUTPUT_PATH}`, { withFileTypes: true });
-}
-
-/**
- * Retrieve Slack files from `channelName` directory.
- * @param {string} backupPath 
- * @param {string} channelName 
- */
-const getSlackFiles = async (backupPath, channelName) => {
-  const channelPath = path.resolve(backupPath, channelName);
-  const files = await fs.promises.readdir(channelPath);
-  return files.map(f => path.resolve(channelPath, f));
 }
 
 /**
  * Retrieve Output files from `folderName` directory. 
  * @param {string} folderName
  */
-const getOutputFiles = async (folderName) => {
-  const channelPath = path.resolve(`${__dirname}/${OUTPUT_PATH}`, folderName);
-  const files = await fs.promises.readdir(channelPath);
-  return files.map(f => path.resolve(channelPath, f));
+const getFiles = async (sourcePath, folderName) => {
+  const folderPath = path.resolve(sourcePath, folderName);
+  const files = await fs.promises.readdir(folderPath);
+  return files.map(f => path.resolve(folderPath, f));
 }
 
 /**
@@ -96,8 +62,8 @@ const getMessages = async path => {
  * Create folder under 'done/' directory.
  * @param {string} folderName 
  */
-const createDoneFolder = async folderName => {
-  await fs.promises.mkdir(`${__dirname}/${DONE_PATH}/${folderName}`, { recursive: true });
+const createDoneFolder = async (sourcePath, folderName) => {
+  await fs.promises.mkdir(`${sourcePath}/${DONE_PATH}/${folderName}`, { recursive: true });
 }
 
 /**
@@ -105,9 +71,9 @@ const createDoneFolder = async folderName => {
  * @param {string} folderName 
  * @param {string} filePath 
  */
-const moveToDone = async (folderName, filePath) => {
+const moveToDone = async (sourcePath, folderName, filePath) => {
   const filename = path.basename(filePath)
-  const donePath = `${__dirname}/${DONE_PATH}/${folderName}/${filename}`;
+  const donePath = `${sourcePath}/${DONE_PATH}/${folderName}/${filename}`;
   fs.rename(filePath, donePath, function (err) {
     if (err) throw err
     logger.info(`Successfully moved to ${donePath}`)
@@ -117,10 +83,8 @@ const moveToDone = async (folderName, filePath) => {
 module.exports = {
   getUsersById,
   getChannelsById,
-  getSlackDirs,
-  getSlackFiles,
-  getOutputDirs,
-  getOutputFiles,
+  getDirNames,
+  getFiles,
   getMessages,
   moveToDone,
   createDoneFolder

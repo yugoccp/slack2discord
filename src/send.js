@@ -4,14 +4,6 @@ const slackApi = require('./slackApi.js');
 const fileReader = require('./fileReader.js');
 const logger = require('./logger.js');
 const utils = require('./utils.js');
-const { 
-  botToken,
-  guildId,
-  parentChannel,
-  includeChannels = [],
-  excludeChannels = [],
-  mapChannels = {}
-} = require('../config.json');
 
 const { 
   Client,
@@ -20,22 +12,33 @@ const {
 
 const IMPORT_WEBHOOK_NAME = 'slack2discord';
 
+module.exports = async (sourcePath, token, guildId, parentChannel) => {
+  
+  const client = new Client();  
+
+  client.once('ready', async () => {
+    await sendToDiscord(sourcePath, guildId, client, parentChannel);
+  });
+
+  await client.login(token);
+}
+
 /**
  * Send files to discord
  * @param {Client} client 
  */
-const sendToDiscord = async (client) => {
+const sendToDiscord = async (sourcePath, guildId, client, parentChannel) => {
 
   const discordParentChannel = client.channels.cache.find(ch => ch.name === parentChannel);
   const guild = client.guilds.cache.get(guildId);
   
-  const outputDirs = (await fileReader.getOutputDirs())
-    .filter(name => !includeChannels.length || includeChannels.find(ch => ch === name)) // include configured channels
-    .filter(name => !excludeChannels.length || !excludeChannels.find(ch => ch === name)); // exclude configured channels;
+  const outputDirs = await fileReader.getDirNames(sourcePath);
+
+  const mapChannels = {}; // TODO: make mapChannel available for command
 
   for (const outputDir of outputDirs) {
 
-    await fileReader.createDoneFolder(outputDir);
+    await fileReader.createDoneFolder(sourcePath, outputDir);
     
     const discordChannelName = mapChannels[outputDir] || outputDir;
     logger.info(`Sending from ${outputDir} to ${discordChannelName} channel...`);
@@ -46,7 +49,7 @@ const sendToDiscord = async (client) => {
     logger.info(`Get or create ${discordChannelName}/${IMPORT_WEBHOOK_NAME} Webhook...`);
     const webhook = await discordApi.getOrCreateWebhook(channel, IMPORT_WEBHOOK_NAME);
     
-    const outputFiles = await fileReader.getOutputFiles(outputDir);
+    const outputFiles = await fileReader.getFiles(sourcePath, outputDir);
 
     const fetchOutputMessages = outputFiles.map(outputFile => 
       fileReader.getMessages(outputFile).then(messages => ({
@@ -94,7 +97,7 @@ const sendToDiscord = async (client) => {
       }
 
       // Move to done
-      fileReader.moveToDone(outputDir, outputFile);
+      fileReader.moveToDone(sourcePath, outputDir, outputFile);
 
     } 
   }
@@ -114,17 +117,3 @@ const fetchMessageFiles = async file => {
       logger.error(err);
     });
 }
-
-const app = async () => {
-  
-  const client = new Client();  
-
-  client.once('ready', async () => {
-    await sendToDiscord(client);
-  });
-
-  await client.login(botToken);
-}
-
-
-app();
