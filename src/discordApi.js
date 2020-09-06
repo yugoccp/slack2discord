@@ -1,5 +1,3 @@
-const axios = require('axios');
-const { botToken } = require('../config.json');
 const { Guild, Client, Channel, Webhook } = require('discord.js');
 
 /**
