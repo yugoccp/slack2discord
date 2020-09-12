@@ -1,14 +1,12 @@
 # Slack2DiscordJS  - a script to help you transfer Slack messages to Discord
-This is an utils project to transfer Slack backup messages to Discord.
+This is an simple CLI app to transfer Slack backup messages to Discord.
 
 ## Simple steps:
 1. Export Slack backup messages.
 2. Create Discord Bot with proper permissions.
 3. Register Bot to the target Server.
-4. Install this project
-5. Configure script (botToken, server and messages path)
-6. Parse your messages.
-7. Send your message to Discord!
+4. Install this project CLI
+5. Send your message to Discord!
 
 ## Export Slack backup messages
 Please follow the official Slack instructions to export and download your Workspace messages:
@@ -42,36 +40,42 @@ You are giving the following permissions to this Bot:
 Select your target server and confirm.
 
 ## Install this project
-Go to the project folder and run:
+Install slack2discord globally
 
-`npm install`
-
-## Configure scirpt
-1. Go to the project folder
-2. Make a copy of config.json.sample and rename to config.json
-3. Fill the config.json file:
->* botToken: your bot token available when your application Bot configuration ***!!! NEVER share or commit your bot token !!!***
->* guildId: your target server Id
->* backupPath: your Slack backup message folder
->* includeChannels: list of channel names to include (optional)
->* excludeChannels: list of channel names to exclude (optional)
->* mapChannels: map of origin channel to target channel name (optional)
-
-## Parse your messages
-Go to the project root folder and run:
-
-`node src/parser.js`
-
-This will create an folder named `/out` with the parsed messages.
+`npm install -g slack2discord`
 
 ## Run the script
-Go to the project root folder and run:
+Go to your backup messages root folder and run the following command:
 
-`node src/sender.js`
+`s2d run -t <ENTER YOUR BOT TOKEN> -sid <ENTER YOUR SERVER ID>`
 
-This script will red files from `/out` and send to Discord. Each succesful file migration are moved to `/done` folder.
+This script will read files from current directory and send to Discord. 
+Each succesful file migration are moved to `.s2d/done` folder.
 
 ## Discord Bot Creation Reference Guide
 https://discord.com/developers/docs/topics/oauth2#bots
 
 
+## Using configuration file
+You can also create a config file to don't repeat yourself:
+1. Create a config.json file and fill it with your data:
+```
+{
+  "token": "YOUR_BOT_TOKEN",
+  "serverId": "999999999999999999",
+  "source": "./slack-backup-folder-path",
+  "parentChannel": "MY_PARENT_CHANNEL",
+  "include": [
+    "include-channel-name"
+  ],
+  "exclude": [
+    "exclude-channel-name"
+  ],
+  "mapChannels": {
+    "old-channel-name": "new-channel-name"
+  },
+  onlyParse: true
+}
+```
+2. Run the following commanßd:
+`s2d run -c <ENTER YOUR CONFIG FILE PATH>`
