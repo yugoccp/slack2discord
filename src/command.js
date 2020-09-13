@@ -2,9 +2,10 @@
 const { program } = require('commander');
 const fs = require('fs');
 const path = require('path');
-const parse = require('./parse');
 const assert = require('assert').strict;
+const parse = require('./parse');
 const send = require('./send');
+const deleteChannels = require('./deleteChannels');
 program.version('0.0.1');
 
 program
@@ -15,7 +16,7 @@ program
   .option('-e, --exclude [value]', 'Exclude channels')
   .option('-c, --config [value]', 'Configuration file path')
   .option('-t, --token [value]', 'Discord bot token')
-  .option('--server [value]', 'Discord server (guild) ID')
+  .option('-sid, --server-id [value]', 'Discord server (guild) ID')
   .option('--only-parse', 'Only parses the messages to check')
   .action(async ({config, onlyParse, ...options}) => {
     
@@ -24,7 +25,7 @@ program
 
     const configFile = config && await fs.promises.readFile(config);
     const configOptions = configFile ? JSON.parse(configFile) : {};
-    const { source, token, server, out, include, exclude, parentChannel } = {
+    const { source, token, serverId, out, include, exclude, parentChannel } = {
       ...configOptions,
       ...options
     }
@@ -40,12 +41,32 @@ program
     if (onlyParse) return;
 
     assert.ok(token, 'Please, provide your Discord Bot token to continue...');
-    assert.ok(server, 'Please, provide your Server (Guild) ID to continue...');
+    assert.ok(serverId, 'Please, provide your Server (Guild) ID to continue...');
 
     console.log(`Sending messages from ${outPath} to Discord`);
 
-    await send(outPath, token, server, pChannel);
+    await send(outPath, token, serverId, pChannel);
 
   });
+
+program
+  .command('rm-channels')
+  .requiredOption('-ch, --channels [value]', 'Channel nameßs to delete')
+  .requiredOption('-t, --token [value]', 'Discord bot token')
+  .requiredOption('-sid, --server-id [value]', 'Discord server (guild) ID')
+  .action(async ({channels, token, serverId}) => {
+
+    try {
+      
+      const channelList = channels.split(',');
+
+      deleteChannels(channelList, token, serverId);
+
+    } catch (e) {
+      console.error(`Couldn't parse channels names. Please make sure to use comma ',' separated string`);
+    }
+    
+
+  })
 
 program.parse(process.argv);
