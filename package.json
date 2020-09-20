@@ -20,6 +20,6 @@
     "mocha": "^8.1.2"
   },
   "bin": {
-    "s2d": "./src/command.js"
+    "s2d": "./src/index.js"
   }
 }

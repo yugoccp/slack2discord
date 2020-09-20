@@ -1,9 +1,9 @@
 const path = require('path');
-const discordApi = require('./discordApi.js');
-const slackApi = require('./slackApi.js');
-const fileReader = require('./fileReader.js');
-const logger = require('./logger.js');
-const utils = require('./utils.js');
+const discordApi = require('../discordApi.js');
+const slackApi = require('../slackApi.js');
+const fileReader = require('../fileReader.js');
+const logger = require('../logger.js');
+const utils = require('../utils.js');
 
 const { 
   Client,

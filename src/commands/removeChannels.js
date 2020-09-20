@@ -1,5 +1,5 @@
 const { Client } = require('discord.js');
-const discordApi = require('./discordApi.js');
+const discordApi = require('../discordApi.js');
 
 module.exports = async (channels, token, serverId) => {
 
@@ -12,7 +12,7 @@ module.exports = async (channels, token, serverId) => {
 
     deleteDiscordChannels.forEach(async channel => {
       try {
-        await discordApi.deleteChannel(client, channel.id);
+        await channel.delete();
       } catch (err) {
         console.error(err);
       }

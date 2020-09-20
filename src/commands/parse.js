@@ -1,8 +1,8 @@
 const fs = require('fs');
 const path = require('path');
-const logger = require('./logger');
-const fileReader = require('./fileReader');
-const messageParser = require('./messageParser');
+const logger = require('../logger');
+const fileReader = require('../fileReader');
+const messageParser = require('../messageParser');
 
 module.exports = async (sourcePath, outputPath, includes = [], excludes = []) => {
 

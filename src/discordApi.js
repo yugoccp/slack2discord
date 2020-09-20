@@ -6,17 +6,7 @@ const { Guild, Client, Channel, Webhook } = require('discord.js');
  * @param {number} guildId 
  */
 const getChannels = async (client, guildId) => {
-  const resp = await client.get(`/guilds/${guildId}/channels`);
-  return resp.data;
-}
-
-/**
- * Delete channel with the given `channelId`.
- * @param {Client} client
- * @param {number} channelId 
- */
-const deleteChannel = async (client, channelId) => {
-  await client.delete(`/channels/${channelId}`);
+  return await client.channels.cache.filter(ch => ch.guild.id == guildId)
 }
 
 /**
@@ -63,6 +53,5 @@ module.exports = {
   getChannels,
   sendMessage,
   getOrCreateWebhook,
-  getOrCreateChannel,
-  deleteChannel,
+  getOrCreateChannel
 }

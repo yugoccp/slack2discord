@@ -3,9 +3,9 @@ const { program } = require('commander');
 const fs = require('fs');
 const path = require('path');
 const assert = require('assert').strict;
-const parse = require('./parse');
-const send = require('./send');
-const deleteChannels = require('./deleteChannels');
+const parse = require('./commands/parse');
+const send = require('./commands/send');
+const removeChannels = require('./commands/removeChannels');
 program.version('0.0.1');
 
 program
@@ -56,11 +56,13 @@ program
   .requiredOption('-sid, --server-id [value]', 'Discord server (guild) ID')
   .action(async ({channels, token, serverId}) => {
 
+    assert.ok(channels, 'Please provide a channel list to be removed');
+
     try {
       
       const channelList = channels.split(',');
 
-      deleteChannels(channelList, token, serverId);
+      removeChannels(channelList, token, serverId);
 
     } catch (e) {
       console.error(`Couldn't parse channels names. Please make sure to use comma ',' separated string`);
