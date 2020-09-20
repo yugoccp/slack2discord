@@ -25,7 +25,7 @@ Create a new Application.
 
 And then create a new Bot for this Application.
 
-![alt create_bot](/imgs/create_bot.png)
+![alt create_bot](/rsc/imgs/create_bot.png)
 
 ## Register Discord Bot to your target Server
 
@@ -35,7 +35,7 @@ https://discord.com/api/oauth2/authorize?client_id=YOUR_BOT_CLIENT_ID&scope=bot&
 
 You are giving the following permissions to this Bot:
 
-![alt bot_permissions](/imgs/bot_permissions.png)
+![alt bot_permissions](/rsc/imgs/bot_permissions.png)
 
 Select your target server and confirm.
 
