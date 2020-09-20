@@ -1,8 +1,8 @@
 {
-  "name": "slack2discordjs",
+  "name": "slack2discord",
   "version": "1.0.0",
   "description": "",
-  "main": "slack2discord.js",
+  "main": "index.js",
   "scripts": {
     "test": "mocha"
   },
