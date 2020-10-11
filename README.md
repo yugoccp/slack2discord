@@ -40,7 +40,7 @@ You are giving the following permissions to this Bot:
 Select your target server and confirm.
 
 ## Install this project
-Install slack2discord globally
+Install slack2discord globally (you may need admin permissions)
 
 `npm install -g slack2discord`
 
