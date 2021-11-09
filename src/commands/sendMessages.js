@@ -1,7 +1,6 @@
 const path = require('path');
-const discordApi = require('../discordApi.js');
-const slackApi = require('../slackApi.js');
-const fileReader = require('../fileReader.js');
+const discordService = require('../discordService.js');
+const slackService = require('../slackService.js');
 const logger = require('../logger.js');
 const utils = require('../utils.js');
 
@@ -32,27 +31,27 @@ const sendToDiscord = async (sourcePath, guildId, client, parentChannel) => {
   const discordParentChannel = client.channels.cache.find(ch => ch.name === parentChannel);
   const guild = client.guilds.cache.get(guildId);
   
-  const outputDirs = await fileReader.getDirNames(sourcePath);
+  const outputDirs = await slackService.getDirNames(sourcePath);
 
   const mapChannels = {}; // TODO: make mapChannel available for command
 
   for (const outputDir of outputDirs) {
 
-    await fileReader.createDoneFolder(sourcePath, outputDir);
+    await slackService.createDoneFolder(sourcePath, outputDir);
     
     const discordChannelName = mapChannels[outputDir] || outputDir;
     logger.info(`Sending from ${outputDir} to ${discordChannelName} channel...`);
     
     logger.info(`Get or create ${discordChannelName} channel...`);
-    const channel = await discordApi.getOrCreateChannel(client, guild, discordChannelName, discordParentChannel);
+    const channel = await discordService.getOrCreateChannel(client, guild, discordChannelName, discordParentChannel);
     
     logger.info(`Get or create ${discordChannelName}/${IMPORT_WEBHOOK_NAME} Webhook...`);
-    const webhook = await discordApi.getOrCreateWebhook(channel, IMPORT_WEBHOOK_NAME);
+    const webhook = await discordService.getOrCreateWebhook(channel, IMPORT_WEBHOOK_NAME);
     
-    const outputFiles = await fileReader.getFiles(sourcePath, outputDir);
+    const outputFiles = await slackService.getFiles(sourcePath, outputDir);
 
     const fetchOutputMessages = outputFiles.map(outputFile => 
-      fileReader.getMessages(outputFile).then(messages => ({
+      slackService.getMessages(outputFile).then(messages => ({
         outputFile,
         messages
       })));
@@ -84,7 +83,7 @@ const sendToDiscord = async (sourcePath, guildId, client, parentChannel) => {
             messageData.files = files.map(f => filesById[f.id]);
           }
 
-          const discordMessage = await discordApi.sendMessage(messageData, webhook);
+          const discordMessage = await discordService.sendMessage(messageData, webhook);
           
           if (reactions) {
             logger.info('Send reactions...')
@@ -97,7 +96,7 @@ const sendToDiscord = async (sourcePath, guildId, client, parentChannel) => {
       }
 
       // Move to done
-      fileReader.moveToDone(sourcePath, outputDir, outputFile);
+      slackService.moveToDone(sourcePath, outputDir, outputFile);
 
     } 
   }
@@ -108,7 +107,7 @@ const sendToDiscord = async (sourcePath, guildId, client, parentChannel) => {
  * @param {Object} file 
  */
 const fetchMessageFiles = async file => {
-  return await slackApi.getFile(file.url)
+  return await slackService.getSlackFile(file.url)
     .then(resp => ({
       id: file.id, 
       attachment: new MessageAttachment(resp.data, file.name)

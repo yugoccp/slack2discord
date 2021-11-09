@@ -1,14 +1,14 @@
 const fs = require('fs');
 const path = require('path');
 const logger = require('../logger');
-const fileReader = require('../fileReader');
+const slackService = require('../slackService');
 const messageParser = require('../messageParser');
 
 module.exports = async (sourcePath, outputPath, includes = [], excludes = []) => {
 
-  const usersById = await fileReader.getUsersById(sourcePath);
+  const usersById = await slackService.getUsersById(sourcePath);
 
-  const slackChannelNames = (await fileReader.getDirNames(sourcePath))
+  const slackChannelNames = (await slackService.getDirNames(sourcePath))
     .filter(name => !includes.length || includes.find(ch => ch === name)) // include configured channels
     .filter(name => !excludes.length || !excludes.find(ch => ch === name)); // exclude configured channels
 
@@ -18,13 +18,13 @@ module.exports = async (sourcePath, outputPath, includes = [], excludes = []) =>
     
     logger.info(`Read Slack ${slackChannelName} channel backup files...`);
 
-    const slackFiles = await fileReader.getFiles(sourcePath, slackChannelName);
+    const slackFiles = await slackService.getFiles(sourcePath, slackChannelName);
     
     slackFiles.forEach(async slackFile => {
 
       logger.info(`Parsing file content: ${slackFile}...`);
       
-      const slackMessages = await fileReader.getMessages(slackFile);
+      const slackMessages = await slackService.getMessages(slackFile);
       const parsedMessages = messageParser.parseMessages(slackMessages, usersById);
 
       const filename = path.basename(slackFile);

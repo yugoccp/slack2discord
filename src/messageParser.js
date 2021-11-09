@@ -1,7 +1,8 @@
 const utils = require('./utils.js');
-const slackApi = require('./slackApi');
 const logger = require('./logger');
+const emoji_data = require('../rsc/emoji.json');
 const Discord = require('discord.js');
+const punycode = require('punycode');
 const Entities = require('html-entities').AllHtmlEntities;
 const entities = new Entities();
 
@@ -76,8 +77,35 @@ const getFiles = message => {
  */
 const getReactions = message => {
   if (message.reactions) {
-    return message.reactions.map(r => slackApi.emojiToUnicode(`:${r.name}:`));
+    return message.reactions.map(r => emojiToUnicode(`:${r.name}:`));
   }
+}
+
+
+/**
+ * Parse Slack emojis to unicode.
+ * Taken from: https://github.com/aaronpk/Slack-IRC-Gateway/commit/541cc464e60e6146c305afd5efc521f6553f690c
+ * @param {string} text 
+ */
+const emojiToUnicode = text => {
+
+  var emoji_re = /\:([a-zA-Z0-9\-_\+]+)\:(?:\:([a-zA-Z0-9\-_\+]+)\:)?/g;
+
+  var new_text = text;
+
+  // Find all Slack emoji in the message
+  while(match=emoji_re.exec(text)) {
+    var ed = emoji_data.find(function(el){
+      return el.short_name == match[1];
+    });
+    if(ed) {
+      var points = ed.unified.split("-");
+      points = points.map(function(p){ return parseInt(p, 16) });
+      new_text = new_text.replace(match[0], punycode.ucs2.encode(points));
+    }
+  }
+
+  return new_text;
 }
 
 /**

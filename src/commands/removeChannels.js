@@ -1,5 +1,5 @@
 const { Client } = require('discord.js');
-const discordApi = require('../discordApi.js');
+const discordService = require('../discordService.js');
 
 module.exports = async (channels, token, serverId) => {
 
@@ -7,7 +7,7 @@ module.exports = async (channels, token, serverId) => {
 
   client.once('ready', async () => {
     const deleteChannelNamesSet = new Set(channels);
-    const discordChannels = await discordApi.getChannels(client, serverId);
+    const discordChannels = await discordService.getChannels(client, serverId);
     const deleteDiscordChannels = discordChannels.filter(ch => deleteChannelNamesSet.has(ch.name));
 
     deleteDiscordChannels.forEach(async channel => {

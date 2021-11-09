@@ -1,7 +1,10 @@
 const fs = require('fs');
 const path = require('path');
+const axios = require('axios');
 const logger = require('./logger');
+
 const DONE_PATH = '../done';
+const slackClient = axios.create({});
 
 /**
  * Retrive Slack users from users.json mapped by Id.
@@ -80,6 +83,18 @@ const moveToDone = async (sourcePath, folderName, filePath) => {
   })
 }
 
+/**
+ * Fetch Slack attachments files
+ * @param {string} url 
+ */
+const getSlackFile = async url => {
+    return slackClient({
+      url,
+      method: 'get',
+      responseType: 'arraybuffer'
+    });
+}
+
 module.exports = {
   getUsersById,
   getChannelsById,
@@ -87,5 +102,6 @@ module.exports = {
   getFiles,
   getMessages,
   moveToDone,
-  createDoneFolder
+  createDoneFolder,
+  getSlackFile
 }

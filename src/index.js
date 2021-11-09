@@ -3,8 +3,8 @@ const { program } = require('commander');
 const fs = require('fs');
 const path = require('path');
 const assert = require('assert').strict;
-const parse = require('./commands/parse');
-const send = require('./commands/send');
+const parseMessages = require('./commands/parseMessages');
+const sendMessages = require('./commands/sendMessages');
 const removeChannels = require('./commands/removeChannels');
 program.version('0.0.1');
 
@@ -36,7 +36,7 @@ program
     
     console.log(`Parsing messages from ${sourcePath}`);
 
-    await parse(sourcePath, outPath, include, exclude);
+    await parseMessages(sourcePath, outPath, include, exclude);
 
     if (onlyParse) return;
 
@@ -45,7 +45,7 @@ program
 
     console.log(`Sending messages from ${outPath} to Discord`);
 
-    await send(outPath, token, serverId, pChannel);
+    await sendMessages(outPath, token, serverId, pChannel);
 
   });
 

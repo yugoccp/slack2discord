@@ -1,6 +1,10 @@
 const fs = require('fs');
 
-const logFile = fs.createWriteStream(__dirname + '/../logs/debug.log', {flags : 'w'});
+fs.mkdir('./logs', { recursive: true }, (err) => {
+  if (err) throw err;
+});
+
+const logFile = fs.createWriteStream('./logs/debug.log', {flags : 'w'});
 
 const info = (msg, ...optionals) => {
   log('INFO', msg, optionals);
