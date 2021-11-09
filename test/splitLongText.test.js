@@ -1,7 +1,7 @@
 const assert = require('assert');
 const utils = require('../src/utils');
 
-describe('splitLongText', function () {
+describe('Split Long Text', function () {
   it('should split text into 3 chunks', function() {
     const result = utils.splitText('Lorem ipsum lorem ipsum', 10);
     assert.equal(result.length, 3);
