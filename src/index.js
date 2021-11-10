@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 const { program } = require('commander');
 const fs = require('fs');
-const path = require('path');
+const package = require('../package.json')
 const assert = require('assert').strict;
 const parseMessages = require('./commands/parseMessages');
 const sendMessages = require('./commands/sendMessages');
 const removeChannels = require('./commands/removeChannels');
-program.version('0.0.1');
+program.version(package.version);
 
 program
   .command('run')
