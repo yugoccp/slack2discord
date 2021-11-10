@@ -48,6 +48,7 @@ const sendToDiscord = async (sourcePath, guildId, client, parentChannel) => {
     logger.info(`Get or create ${discordChannelName}/${IMPORT_WEBHOOK_NAME} Webhook...`);
     const webhook = await discordService.getOrCreateWebhook(channel, IMPORT_WEBHOOK_NAME);
     
+    logger.info(`Read messages from ${sourcePath}/${outputDir}`);
     const outputFiles = await slackService.getFiles(sourcePath, outputDir);
 
     const fetchOutputMessages = outputFiles.map(outputFile => 
@@ -58,6 +59,7 @@ const sendToDiscord = async (sourcePath, guildId, client, parentChannel) => {
 
     const outputMessages = await Promise.all(fetchOutputMessages);
 
+    logger.info(`Get all attached files...`);
     const fetchFiles = outputMessages
       .map(om => om.messages).flatMap()
       .filter(msg => msg.files)
