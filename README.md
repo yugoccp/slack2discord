@@ -29,9 +29,9 @@ And then create a new Bot for this Application.
 
 ## Register Discord Bot to your target Server
 
-Access following URL to authorize your Bot into your server with administrator permissions (replace YOUR_BOT_CLIENT_ID).
+Access following URL to authorize your Bot into your server with administrator permissions (replace YOUR_BOT_APPLICATION_ID).
 
-https://discord.com/api/oauth2/authorize?client_id=YOUR_BOT_CLIENT_ID&scope=bot&permissions=537316432
+https://discord.com/api/oauth2/authorize?client_id=YOUR_BOT_APPLICATION_ID&scope=bot&permissions=537316432
 
 You are giving the following permissions to this Bot:
 
