@@ -23,7 +23,7 @@ module.exports = async (sourcePath, token, guildId, parentChannel) => {
 }
 
 /**
- * Send files to discord
+ * Send files to discord.
  * @param {Client} client 
  */
 const sendToDiscord = async (sourcePath, guildId, client, parentChannel) => {
@@ -49,24 +49,10 @@ const sendToDiscord = async (sourcePath, guildId, client, parentChannel) => {
     const webhook = await discordService.getOrCreateWebhook(channel, IMPORT_WEBHOOK_NAME);
     
     logger.info(`Read messages from ${sourcePath}/${outputDir}`);
-    const outputFiles = await slackService.getFiles(sourcePath, outputDir);
-
-    const fetchOutputMessages = outputFiles.map(outputFile => 
-      slackService.getMessages(outputFile).then(messages => ({
-        outputFile,
-        messages
-      })));
-
-    const outputMessages = await Promise.all(fetchOutputMessages);
+    const outputMessages = await getOutputMessages(outputDir);
 
     logger.info(`Get all attached files...`);
-    const fetchFiles = outputMessages
-      .map(om => om.messages).flatMap()
-      .filter(msg => msg.files)
-      .map(msg => msg.files).flatMap()
-      .map(fetchMessageFiles);
-
-    const filesById = (await Promise.all(fetchFiles)).reduce((acc, f) => ({...acc, [f.id]: f.attachment}), {});
+    const filesById = await getFilesById(outputMessages);
 
     for (const outputMessage of outputMessages) {
 
@@ -92,26 +78,65 @@ const sendToDiscord = async (sourcePath, guildId, client, parentChannel) => {
 
     } 
   }
+}
 
-  const sendSingleMessage = async (message, filesById, webhook) => {
-    const { reactions, files, ...messageData } = message;
+/**
+ * Get dictionary of message attachment files mapped by file id.
+ * @param { { messages: object[] } } outputMessages 
+ * @returns 
+ */
+const getFilesById = async (outputMessages) => {
+  const fetchFiles = outputMessages
+    .map(om => om.messages).flatMap()
+    .filter(msg => msg.files)
+    .map(msg => msg.files).flatMap()
+    .map(fetchMessageFiles);
 
-    if (files) {
-      messageData.files = files.map(f => filesById[f.id]);
-    }
+  return (await Promise.all(fetchFiles)).reduce((acc, f) => ({...acc, [f.id]: f.attachment}), {});
+}
 
-    const discordMessage = await discordService.sendMessage(messageData, webhook);
+/**
+ * Send single message with file and reactions.
+ * @param {*} message 
+ * @param {object} filesById 
+ * @param {*} webhook 
+ */
+const sendSingleMessage = async (message, filesById, webhook) => {
+  const { reactions, files, ...messageData } = message;
 
-    if (reactions) {
-      logger.info('Send reactions...');
-      reactions.forEach(r => discordMessage.react(r));
-    }
+  if (files) {
+    messageData.files = files.map(f => filesById[f.id]);
+  }
+
+  const discordMessage = await discordService.sendMessage(messageData, webhook);
+
+  if (reactions) {
+    logger.info('Send reactions...');
+    reactions.forEach(r => discordMessage.react(r));
   }
 }
 
 /**
+ * Get all messages from all files at outputDir.
+ * @param {*} sourcePath 
+ * @param {*} outputDir 
+ * @returns { { outputFile: string, messages: object[] } }
+ */
+const getOutputMessages = async (sourcePath, outputDir) => {
+  const outputFiles = await slackService.getFiles(sourcePath, outputDir);
+
+  const fetchOutputMessages = outputFiles.map(outputFile => slackService.getMessages(outputFile).then(messages => ({
+    outputFile,
+    messages
+  })));
+
+  const outputMessages = await Promise.all(fetchOutputMessages);
+  return outputMessages;
+}
+
+/**
  * Fetch files.
- * @param {Object} file 
+ * @param {object} file 
  */
 const fetchMessageFiles = async file => {
   return await slackService.getSlackFile(file.url)
