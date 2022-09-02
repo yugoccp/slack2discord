@@ -77,20 +77,10 @@ const sendToDiscord = async (sourcePath, guildId, client, parentChannel) => {
         logger.info(`Sending message ${i} from ${filename}...`);
         
         const message = messages[i];
-        const { reactions, files, ...messageData }  = message;
-
+        
         try {
-
-          if (files) {
-            messageData.files = files.map(f => filesById[f.id]);
-          }
-
-          const discordMessage = await discordService.sendMessage(messageData, webhook);
           
-          if (reactions) {
-            logger.info('Send reactions...')
-            reactions.forEach(r => discordMessage.react(r));
-          }
+          await sendSingleMessage(message, filesById, webhook);
 
         } catch (err) {
           logger.error(`Error sending message ${i} from ${filename}...`, err);
@@ -101,6 +91,21 @@ const sendToDiscord = async (sourcePath, guildId, client, parentChannel) => {
       slackService.moveToDone(sourcePath, outputDir, outputFile);
 
     } 
+  }
+
+  const sendSingleMessage = async (message, filesById, webhook) => {
+    const { reactions, files, ...messageData } = message;
+
+    if (files) {
+      messageData.files = files.map(f => filesById[f.id]);
+    }
+
+    const discordMessage = await discordService.sendMessage(messageData, webhook);
+
+    if (reactions) {
+      logger.info('Send reactions...');
+      reactions.forEach(r => discordMessage.react(r));
+    }
   }
 }
 
