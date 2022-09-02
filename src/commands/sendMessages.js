@@ -6,14 +6,18 @@ const utils = require('../utils.js');
 
 const { 
   Client,
-  MessageAttachment, 
+  MessageAttachment,
+  IntentsBitField
 } = require('discord.js');
 
 const IMPORT_WEBHOOK_NAME = 'slack2discord';
+const INTENT_FLAGS = [
+  IntentsBitField.Flags.MessageContent
+]
 
 module.exports = async (sourcePath, token, guildId, parentChannel) => {
   
-  const client = new Client();  
+  const client = new Client({intents: INTENT_FLAGS});  
 
   client.once('ready', async () => {
     await sendToDiscord(sourcePath, guildId, client, parentChannel);
