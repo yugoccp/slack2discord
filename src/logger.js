@@ -15,10 +15,15 @@ const error = (msg, ...optionals) => {
 }
 
 const log = (logLevel, msg, ...optionals) => {
-  logFile.write(`[${logLevel}] ${msg}\n`);
-  if (optionals) {
-    optionals.forEach(o => logFile.write(`[${logLevel}] ${o}\n`));
-  }
+  writeLog(`[${logLevel}] ${msg}\n`);
+  // if (optionals.length > 0) {
+  //   optionals.forEach(o => writeLog(`[${logLevel}] ${o}\n`));
+  // }
+}
+
+const writeLog = (logMsg) => {
+  console.log(logMsg)
+  logFile.write(logMsg);
 }
 
 module.exports = {

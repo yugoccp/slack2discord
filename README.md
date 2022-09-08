@@ -1,6 +1,11 @@
 # Slack2DiscordJS  - a script to help you transfer Slack messages to Discord
 This is an simple CLI app to transfer Slack backup messages to Discord.
 
+## Requirements
+- NodeJS >=16
+- Exported Slack backup messages
+- Configured Discord Server and Bot
+
 ## Simple steps:
 1. Export Slack backup messages.
 2. Create Discord Bot with proper permissions.
@@ -52,10 +57,6 @@ Go to your backup messages root folder and run the following command:
 This script will read files from current directory and send to Discord. 
 Each succesful file migration are moved to `.s2d/done` folder.
 
-## Discord Bot Creation Reference Guide
-https://discord.com/developers/docs/topics/oauth2#bots
-
-
 ## Using configuration file
 You can also create a config file to don't repeat yourself:
 1. Create a config.json file and fill it with your data:
@@ -77,5 +78,16 @@ You can also create a config file to don't repeat yourself:
   onlyParse: true
 }
 ```
-2. Run the following commanßd:
+2. Run the following command:
 `s2d run -c <ENTER YOUR CONFIG FILE PATH>`
+
+## References
+
+### Discord JS Documentation
+https://discord.js.org/#/
+
+### Discord API Types Documentation
+https://discord-api-types.dev/
+
+### Discord Bot Creation Reference Guide
+https://discord.com/developers/docs/topics/oauth2#bots

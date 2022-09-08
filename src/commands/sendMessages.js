@@ -19,11 +19,17 @@ module.exports = async (sourcePath, token, guildId, parentChannel) => {
   
   const client = new Client({intents: INTENT_FLAGS});  
 
-  client.once('ready', async () => {
-    await sendToDiscord(sourcePath, guildId, client, parentChannel);
-  });
+  const sendMessagePromise = new Promise((resolve) => {
+
+    client.once('ready', async () => {
+      await sendToDiscord(sourcePath, guildId, client, parentChannel);
+      resolve();
+    });
+  })
 
   await client.login(token);
+
+  return sendMessagePromise;
 }
 
 /**
@@ -47,13 +53,13 @@ const sendToDiscord = async (sourcePath, guildId, client, parentChannel) => {
     logger.info(`Sending from ${outputDir} to ${discordChannelName} channel...`);
     
     logger.info(`Get or create ${discordChannelName} channel...`);
-    const channel = await discordService.getOrCreateChannel(client, guild, discordChannelName, discordParentChannel);
+    const channel = await discordService.getOrCreateChannel(guild, discordChannelName, discordParentChannel);
     
     logger.info(`Get or create ${discordChannelName}/${IMPORT_WEBHOOK_NAME} Webhook...`);
     const webhook = await discordService.getOrCreateWebhook(channel, IMPORT_WEBHOOK_NAME);
     
     logger.info(`Read messages from ${sourcePath}/${outputDir}`);
-    const outputMessages = await getOutputMessages(outputDir);
+    const outputMessages = await getOutputMessages(sourcePath, outputDir);
 
     logger.info(`Get all attached files...`);
     const filesById = await getFilesById(outputMessages);
@@ -78,10 +84,11 @@ const sendToDiscord = async (sourcePath, guildId, client, parentChannel) => {
       }
 
       // Move to done
-      slackService.moveToDone(sourcePath, outputDir, outputFile);
-
+      await slackService.moveToDone(sourcePath, outputDir, outputFile);
     } 
   }
+
+  return Promise.resolve();
 }
 
 /**
@@ -116,8 +123,11 @@ const sendSingleMessage = async (message, filesById, webhook) => {
 
   if (reactions) {
     logger.info('Send reactions...');
-    reactions.forEach(r => discordMessage.react(r));
+    const sentReactions = reactions.map(r => discordMessage.react(r));
+    await Promise.all(sentReactions)
   }
+
+  return Promise.resolve();
 }
 
 /**

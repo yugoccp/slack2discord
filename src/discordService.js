@@ -1,4 +1,4 @@
-const { Guild, Client, Channel, Webhook } = require('discord.js');
+const { Guild, Client, Channel, Webhook, ChannelType } = require('discord.js');
 
 /**
  * Retrieve channels of the give `guildId`.
@@ -21,15 +21,15 @@ const sendMessage = async (data, webhook) => {
 
 /**
  * Retrieve channel with `channelName` from Discord. If no channel with given name exists, create it and retrieve.
- * @param {Client} client 
  * @param {Guild} guild 
  * @param {string} channelName 
  * @param {Channel} parentChannel 
  */
-const getOrCreateChannel = async (client, guild, channelName, parentChannel) => {
-  const channel = client.channels.cache.find(ch => ch.name === channelName);
+const getOrCreateChannel = async (guild, channelName, parentChannel) => {
+  const channels = await guild.channels.fetch();
+  const channel = [...channels.values()].find(ch => ch.name == channelName)
   if (!channel) {
-    return await guild.channels.create(channelName, { type: 'text', parent: parentChannel });
+    return await guild.channels.create({name: channelName, type: ChannelType.GuildText, parent: parentChannel });
   }
   return channel;
 }
@@ -43,7 +43,7 @@ const getOrCreateWebhook = async (channel, webhookName) => {
   const webhooks = await channel.fetchWebhooks();
   const webhook = webhooks.find(wh => wh.name == webhookName);
   if (!webhook) {
-    return await channel.createWebhook(webhookName);
+    return await channel.createWebhook({name: webhookName});
   }
   return webhook;
 }

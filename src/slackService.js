@@ -44,6 +44,7 @@ const getDirNames = async(path) => {
 
 /**
  * Retrieve Output files from `folderName` directory. 
+ * @param {string} sourcePath
  * @param {string} folderName
  */
 const getFiles = async (sourcePath, folderName) => {
@@ -77,10 +78,15 @@ const createDoneFolder = async (sourcePath, folderName) => {
 const moveToDone = async (sourcePath, folderName, filePath) => {
   const filename = path.basename(filePath)
   const donePath = `${sourcePath}/${DONE_PATH}/${folderName}/${filename}`;
-  fs.rename(filePath, donePath, function (err) {
-    if (err) throw err
-    logger.info(`Successfully moved to ${donePath}`)
-  })
+  const renamePromise = new Promise((resolve, reject) => {
+    fs.rename(filePath, donePath, function (err) {
+      if (err) reject(err);
+      logger.info(`Successfully moved to ${donePath}`);
+      resolve();
+    })
+  });
+
+  return renamePromise;
 }
 
 /**
