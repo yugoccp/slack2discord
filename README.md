@@ -32,6 +32,10 @@ And then create a new Bot for this Application.
 
 ![alt create_bot](/rsc/imgs/create_bot.png)
 
+Click on the new bot and setup Gateway Intents and enable Message Content Intent option
+
+![alt bot_intent](/rsc/imgs/bot_intents.png)
+
 ## Register Discord Bot to your target Server
 
 Access following URL to authorize your Bot into your server with administrator permissions (replace YOUR_BOT_APPLICATION_ID).
