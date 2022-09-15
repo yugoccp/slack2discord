@@ -1,7 +1,7 @@
 const utils = require('./utils.js');
 const logger = require('./logger');
 const emoji_data = require('../rsc/emoji.json');
-const Discord = require('discord.js');
+const { EmbedBuilder } = require('discord.js');
 const punycode = require('punycode');
 const Entities = require('html-entities').AllHtmlEntities;
 const entities = new Entities();
@@ -109,18 +109,18 @@ const emojiToUnicode = text => {
 }
 
 /**
- * Retrieve array of DIscord Embeds.
+ * Retrieve array of Discord Embeds.
  * @param {Object} message 
  * @param {Object} usersById 
  */
 const getEmbeds = (message, usersById) => {
   if (message.attachments) {
     return message.attachments.map(att => {
-      const embed = new Discord.MessageEmbed()
-      embed.setColor("D0D0D0");
-      embed.setURL(att.from_url || att.original_url);
-      embed.setImage(att.image_url);
-      embed.setThumbnail(att.thumb_url);
+      const embed = new EmbedBuilder()
+        .setColor("D0D0D0")
+        .setURL(att.from_url || att.original_url)
+        .setImage(att.image_url)
+        .setThumbnail(att.thumb_url);
       if (att.footer) embed.setFooter(att.footer, att.footer_icon);
       if (att.title) embed.setTitle(att.title);
       if (att.author_name) embed.setAuthor(att.author_name, att.author_icon);
@@ -231,5 +231,6 @@ const findUsername = (userId, usersById) => {
 }
 
 module.exports = {
-  parseMessages
+  parseMessages,
+  getEmbeds
 }
