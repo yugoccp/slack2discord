@@ -3,7 +3,6 @@ const path = require('path');
 const axios = require('axios');
 const logger = require('./logger');
 
-const DONE_PATH = '../done';
 const slackClient = axios.create({});
 
 /**
@@ -11,8 +10,9 @@ const slackClient = axios.create({});
  * @param {string} backupPath 
  */
 const getUsersById = async (backupPath) => {
-  const file = await fs.promises.readFile(`${backupPath}/users.json`);
-  return JSON.parse(file).reduce((acc, value) => {
+  const userFilePath = path.join(backupPath, 'users.json')
+  const userFile = await fs.promises.readFile(userFilePath);
+  return JSON.parse(userFile).reduce((acc, value) => {
     acc[value.id] = value;
     return acc;
   }, {});
@@ -23,8 +23,9 @@ const getUsersById = async (backupPath) => {
  * @param {string} backupPath 
  */
 const getChannelsById = async (backupPath) => {
-  const file = await fs.promises.readFile(`${backupPath}/channels.json`);
-  return JSON.parse(file).reduce((acc, ch) => {
+  const channelsPath = path.join(backupPath, 'channels.json');
+  const channelsFile = await fs.promises.readFile(channelsPath);
+  return JSON.parse(channelsFile).reduce((acc, ch) => {
     acc[ch.id] = ch;
     return acc;
   }, {});
@@ -58,8 +59,16 @@ const getFiles = async (sourcePath, folderName) => {
  * @param {string} path 
  */
 const getMessages = async path => {
-  const data = await fs.promises.readFile(path);
-  return JSON.parse(data);
+  try {
+    const data = await fs.promises.readFile(path);
+    return JSON.parse(data);
+  } catch (e) {
+    logger.error(e);
+  }
+}
+
+const getDoneFolderPath = (sourcePath, folderName) => {
+  return path.join(sourcePath, '..', 'done', folderName);
 }
 
 /**
@@ -67,7 +76,7 @@ const getMessages = async path => {
  * @param {string} folderName 
  */
 const createDoneFolder = async (sourcePath, folderName) => {
-  await fs.promises.mkdir(`${sourcePath}/${DONE_PATH}/${folderName}`, { recursive: true });
+  await fs.promises.mkdir(getDoneFolderPath(sourcePath, folderName), { recursive: true });
 }
 
 /**
@@ -75,13 +84,13 @@ const createDoneFolder = async (sourcePath, folderName) => {
  * @param {string} folderName 
  * @param {string} filePath 
  */
-const moveToDone = async (sourcePath, folderName, filePath) => {
-  const filename = path.basename(filePath)
-  const donePath = `${sourcePath}/${DONE_PATH}/${folderName}/${filename}`;
+const moveToDone = async (sourcePath, folderName, sourceFilePath) => {
+  const filename = path.basename(sourceFilePath)
+  const doneFilePath = path.join(getDoneFolderPath(sourcePath, folderName), filename);
   const renamePromise = new Promise((resolve, reject) => {
-    fs.rename(filePath, donePath, function (err) {
+    fs.rename(sourceFilePath, doneFilePath, (err) => {
       if (err) reject(err);
-      logger.info(`Successfully moved to ${donePath}`);
+      logger.info(`Successfully moved to ${doneFilePath}`);
       resolve();
     })
   });

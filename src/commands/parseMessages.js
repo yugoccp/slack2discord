@@ -12,7 +12,7 @@ module.exports = async (sourcePath, outputPath, includes = [], excludes = []) =>
     .filter(name => !includes.length || includes.find(ch => ch === name)) // include configured channels
     .filter(name => !excludes.length || !excludes.find(ch => ch === name)); // exclude configured channels
 
-  await Promise.all(slackChannelNames.map(slackChannelName => fs.promises.mkdir(`${outputPath}/${slackChannelName}`, { recursive: true })));
+  await Promise.all(slackChannelNames.map(slackChannelName => fs.promises.mkdir(path.join(outputPath, slackChannelName), { recursive: true })));
   
   slackChannelNames.forEach(async slackChannelName => {    
     
@@ -28,7 +28,8 @@ module.exports = async (sourcePath, outputPath, includes = [], excludes = []) =>
       const parsedMessages = messageParser.parseMessages(slackMessages, usersById);
 
       const filename = path.basename(slackFile);
-      const outputFile = fs.createWriteStream(`${outputPath}/${slackChannelName}/${filename}`, {flags : 'w'});
+      const outputFilePath = path.join(outputPath, slackChannelName, filename);
+      const outputFile = fs.createWriteStream(outputFilePath, {flags : 'w'});
       outputFile.write(JSON.stringify(parsedMessages, (_, value) => {
         if (value !== null) return value;
       }, 2));

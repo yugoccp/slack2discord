@@ -10,7 +10,7 @@ const {
   IntentsBitField
 } = require('discord.js');
 
-const IMPORT_WEBHOOK_NAME = 'slack2discord';
+const IMPORT_WEBHOOK_NAME = 's2d';
 const INTENT_FLAGS = [
   IntentsBitField.Flags.MessageContent
 ]

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const { program } = require('commander');
 const fs = require('fs');
+const path = require('path');
 const package = require('../package.json')
 const assert = require('assert').strict;
 const parseMessages = require('./commands/parseMessages');
@@ -33,7 +34,7 @@ async function main() {
       }
 
       const sourcePath = source || process.cwd();
-      const outPath = out || `${sourcePath}/.s2d/out`;
+      const outPath = out || path.join(sourcePath, '.s2d', 'out');
       const pChannel = parentChannel || 'MIGRATION';
       
       console.log(`Parsing messages from ${sourcePath}`);
@@ -49,7 +50,7 @@ async function main() {
 
       await sendMessages(outPath, token, serverId, pChannel);
 
-      console.log(`Sent all messages to Discord \\o/!`);
+      console.log(`Sent all messages to Discord \\o/! You can leave this terminal now.`);
 
       return;
     });
@@ -72,8 +73,6 @@ async function main() {
       } catch (e) {
         console.error(`Couldn't parse channels names. Please make sure to use comma ',' separated string`);
       }
-      
-
     })
 
   await program.parseAsync(process.argv);
