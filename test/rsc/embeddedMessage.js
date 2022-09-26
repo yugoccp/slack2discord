@@ -14,14 +14,18 @@ const message =
     "attachments": [
         {
             "title": "My Title",
-            "title_link": "https:\/\/www.google.com\/",
+            "title_link": "https://www.discord.com/",
             "text": "My attachment text",
             "fallback": "My fallback title",
-            "from_url": "https:\/\/www.google.com\/",
-            "service_icon": "https:\/\/www.google.com\/images\/branding\/googlelogo\/2x\/googlelogo_color_272x92dp.png",
-            "service_name": "google.com",
+            "from_url": "https://www.discord.com/",
+            "service_icon": "https://assets-global.website-files.com/6257adef93867e50d84d30e2/625e5fcef7ab80b8c1fe559e_Discord-Logo-Color.png",
+            "service_name": "discord.com",
             "id": 1,
-            "original_url": "https:\/\/www.google.com\/"
+            "original_url": "https://www.discord.com/",
+            "footer": "My Footer",
+            "footer_icon": "https://assets-global.website-files.com/6257adef93867e50d84d30e2/625e5fcef7ab80b8c1fe559e_Discord-Logo-Color.png",
+            "author_name": "My Author",
+            "author_icon": "https://assets-global.website-files.com/6257adef93867e50d84d30e2/625e5fcef7ab80b8c1fe559e_Discord-Logo-Color.png"
         }
     ]
 };

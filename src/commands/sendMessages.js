@@ -119,6 +119,7 @@ const sendSingleMessage = async (message, filesById, webhook) => {
     messageData.files = files.map(f => filesById[f.id]);
   }
 
+  console.log(messageData)
   const discordMessage = await discordService.sendMessage(messageData, webhook);
 
   if (reactions) {

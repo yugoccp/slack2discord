@@ -121,9 +121,15 @@ const getEmbeds = (message, usersById) => {
         .setURL(att.from_url || att.original_url)
         .setImage(att.image_url)
         .setThumbnail(att.thumb_url);
-      if (att.footer) embed.setFooter(att.footer, att.footer_icon);
+      if (att.footer) embed.setFooter({
+        text: att.footer, 
+        iconURL: att.footer_icon
+      });
       if (att.title) embed.setTitle(att.title);
-      if (att.author_name) embed.setAuthor(att.author_name, att.author_icon);
+      if (att.author_name) embed.setAuthor({
+        name: att.author_name, 
+        iconURL: att.author_icon
+      });
       if (att.ts) embed.setTimestamp(new Date(parseInt(att.ts)*1000).toISOString());
       if (att.text) {
         let description = handleText(att.text, usersById);
