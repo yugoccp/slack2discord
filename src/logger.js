@@ -1,11 +1,11 @@
 const path = require('path');
 const fs = require('fs');
 
-fs.mkdir(path.join('.', 'logs'), { recursive: true }, (err) => {
+fs.mkdir(path.join('.', '.logs'), { recursive: true }, (err) => {
   if (err) throw err;
 });
 
-const logFile = fs.createWriteStream(path.join('.', 'logs', 'debug.log'), {flags : 'w'});
+const logFile = fs.createWriteStream(path.join('.', '.logs', 'debug.log'), {flags : 'w'});
 
 const info = (msg, ...optionals) => {
   log('INFO', msg, ...optionals);
