@@ -130,7 +130,7 @@ const getEmbeds = (message, usersById) => {
         name: att.author_name, 
         iconURL: att.author_icon
       });
-      if (att.ts) embed.setTimestamp(new Date(parseInt(att.ts)*1000).toISOString());
+      if (att.ts) embed.setTimestamp(new Date(parseInt(att.ts)*1000));
       if (att.text) {
         let description = handleText(att.text, usersById);
         embed.setDescription(description.substring(0, 2000));

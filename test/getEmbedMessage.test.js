@@ -42,4 +42,14 @@ describe('Parse Embeded Messages', function () {
     const result = messageParser.getEmbeds(embedMessage);
     assert.equal(result[0].data.author.icon_url, "https://assets-global.website-files.com/6257adef93867e50d84d30e2/625e5fcef7ab80b8c1fe559e_Discord-Logo-Color.png")
   });
+
+  it('should match embed message timestamp', function() {
+    const result = messageParser.getEmbeds(embedMessage);
+    assert.equal(result[0].data.timestamp, new Date(1665280000000).toISOString())
+  });
+
+  it('should match embed message thumb URL', function() {
+    const result = messageParser.getEmbeds(embedMessage);
+    assert.equal(result[0].data.thumbnail.url, "https://assets-global.website-files.com/6257adef93867e50d84d30e2/625e5fcef7ab80b8c1fe559e_Discord-Logo-Color.png")
+  });
 });
