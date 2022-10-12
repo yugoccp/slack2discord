@@ -30,6 +30,8 @@ Create a new Application.
 
 And then create a new Bot for this Application.
 
+**IMPORTANT!** Recent changes on Discord API invalidate Bots with "discord" (case insensitive) in their names! Make sure to create Bot with valid name.
+
 ![alt create_bot](/rsc/imgs/create_bot.png)
 
 Click on the new bot and setup Gateway Intents and enable Message Content Intent option
