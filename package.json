@@ -21,7 +21,7 @@
   },
   "devDependencies": {
     "faker": "^4.1.0",
-    "mocha": "^8.1.2"
+    "mocha": "^10.1.0"
   },
   "bin": {
     "s2d": "./src/index.js"
