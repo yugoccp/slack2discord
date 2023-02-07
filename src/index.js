@@ -28,7 +28,7 @@ async function main() {
 
       const configFile = config && await fs.promises.readFile(config);
       const configOptions = configFile ? JSON.parse(configFile) : {};
-      const { source, token, serverId, out, include, exclude, parentChannel } = {
+      const { source, token, serverId, out, include, exclude, parentChannel, onlyParse } = {
         ...configOptions,
         ...options
       }
