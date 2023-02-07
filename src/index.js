@@ -21,7 +21,7 @@ async function main() {
     .option('-t, --token [value]', 'Discord bot token')
     .option('-sid, --server-id [value]', 'Discord server (guild) ID')
     .option('--only-parse', 'Only parses the messages to check')
-    .action(async ({config, onlyParse, ...options}) => {
+    .action(async ({config, ...options}) => {
       
       options.include = options.include ? options.include.split(',') : [];
       options.exclude = options.exclude ? options.exclude.split(',') : [];
