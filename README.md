@@ -81,7 +81,7 @@ You can also create a config file to don't repeat yourself:
   "mapChannels": {
     "old-channel-name": "new-channel-name"
   },
-  onlyParse: true
+  "onlyParse": true
 }
 ```
 2. Run the following command:
