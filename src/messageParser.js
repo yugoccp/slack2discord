@@ -125,7 +125,7 @@ const getEmbeds = (message, usersById) => {
         text: att.footer, 
         iconURL: att.footer_icon
       });
-      if (att.title) embed.setTitle(att.title);
+      if (att.title) embed.setTitle(att.title.substring(0, 255));
       if (att.author_name) embed.setAuthor({
         name: att.author_name, 
         iconURL: att.author_icon
