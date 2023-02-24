@@ -23,11 +23,18 @@ async function main() {
     .option('--only-parse', 'Only parses the messages to check')
     .action(async ({config, ...options}) => {
       
-      options.include = options.include ? options.include.split(',') : [];
-      options.exclude = options.exclude ? options.exclude.split(',') : [];
+      if (options.include)
+        options.include = options.include.split(',');
+      if (options.exclude)
+        options.exclude = options.exclude.split(',');
 
       const configFile = config && await fs.promises.readFile(config);
-      const configOptions = configFile ? JSON.parse(configFile) : {};
+      var configOptions = configFile ? JSON.parse(configFile) : {};
+      if (!configOptions.include)
+        configOptions.include = [];
+      if (!configOptions.exclude)
+        configOptions.exclude = [];
+
       const { source, token, serverId, out, include, exclude, parentChannel, onlyParse } = {
         ...configOptions,
         ...options
