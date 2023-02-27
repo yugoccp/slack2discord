@@ -1,7 +1,8 @@
 node_modules/
 backups/
 out/
-logs/
+.logs/
 done/
 config.json
 logs/debug.log
+.DS_store

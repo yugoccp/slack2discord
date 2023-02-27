@@ -1,5 +1,5 @@
 const { Client } = require('discord.js');
-const discordService = require('../discordService.js');
+const discordService = require('../services/discordService.js');
 
 module.exports = async (channels, token, serverId) => {
 

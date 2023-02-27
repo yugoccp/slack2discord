@@ -1,5 +1,5 @@
 const assert = require('assert');
-const messageParser = require('../src/messageParser');
+const messageParser = require('../src/services/messageParser');
 const longMessage = require('./rsc/longMessage');
 
 describe('Parse Long Message', function () {

@@ -40,22 +40,14 @@ const splitText = (text, maxLength) => {
   return [text];
 }
 
-Array.prototype.groupBy = function(key) {
-  return this.reduce((acc, elem) => {
-    if (elem) {
-      (acc[elem[key]] = acc[elem[key]] || []).push(elem);
-      return acc;
-    }
-  }, {});
-};
-
-Array.prototype.flatMap = function() {
-  return this.reduce((acc, item) => acc.concat(item), []);
+const flatMap = (arr) => {
+  return arr.reduce((acc, item) => acc.concat(item), []);
 }
 
 module.exports = {
   delay,
   dateFormat,
   unescapeUrl,
-  splitText
+  splitText,
+  flatMap
 }

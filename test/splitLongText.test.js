@@ -1,5 +1,5 @@
 const assert = require('assert');
-const utils = require('../src/utils');
+const utils = require('../src/utils/utils');
 
 describe('Split Long Text', function () {
   it('should split text into 3 chunks', function() {

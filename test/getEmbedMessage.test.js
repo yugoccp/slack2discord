@@ -1,5 +1,5 @@
 const assert = require('assert');
-const messageParser = require('../src/messageParser');
+const messageParser = require('../src/services/messageParser');
 const embedMessage = require('./rsc/embeddedMessage');
 
 describe('Parse Embeded Messages', function () {

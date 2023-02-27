@@ -1,12 +1,12 @@
 const path = require('path');
-const discordService = require('../discordService.js');
-const slackService = require('../slackService.js');
-const logger = require('../logger.js');
-const utils = require('../utils.js');
+const discordService = require('../services/discordService.js');
+const slackService = require('../services/slackService.js');
+const logger = require('../utils/logger.js');
+const { flatMap } = require('../utils/utils')
 
 const { 
   Client,
-  MessageAttachment,
+  Attachment,
   IntentsBitField
 } = require('discord.js');
 
@@ -97,11 +97,9 @@ const sendToDiscord = async (sourcePath, guildId, client, parentChannel) => {
  * @returns 
  */
 const getFilesById = async (outputMessages) => {
-  const fetchFiles = outputMessages
-    .map(om => om.messages).flatMap()
-    .filter(msg => msg.files)
-    .map(msg => msg.files).flatMap()
-    .map(fetchMessageFiles);
+  const allMessages = flatMap(outputMessages.map(om => om.messages));
+  const allFiles = flatMap(allMessages.filter(msg => msg.files).map(msg => msg.files));
+  const fetchFiles = allFiles.map(fetchMessageFiles);
 
   return (await Promise.all(fetchFiles)).reduce((acc, f) => ({...acc, [f.id]: f.attachment}), {});
 }
@@ -119,12 +117,14 @@ const sendSingleMessage = async (message, filesById, webhook) => {
     messageData.files = files.map(f => filesById[f.id]);
   }
 
-  console.log(messageData)
   const discordMessage = await discordService.sendMessage(messageData, webhook);
 
   if (reactions) {
     logger.info('Send reactions...');
-    const sentReactions = reactions.map(r => discordMessage.react(r));
+    const sentReactions = reactions.map(r => 
+        discordMessage.react(r)
+        .catch(err => logger.error(err))
+      );
     await Promise.all(sentReactions)
   }
 
@@ -157,7 +157,7 @@ const fetchMessageFiles = async file => {
   return await slackService.getSlackFile(file.url)
     .then(resp => ({
       id: file.id, 
-      attachment: new MessageAttachment(resp.data, file.name)
+      attachment: new Attachment(resp.data, file.name)
     }))
     .catch(err => {
       logger.error(err);

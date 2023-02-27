@@ -1,6 +1,6 @@
-const utils = require('./utils.js');
-const logger = require('./logger');
-const emoji_data = require('../rsc/emoji.json');
+const utils = require('../utils/utils.js');
+const logger = require('../utils/logger');
+const emoji_data = require('../../rsc/emoji.json');
 const { EmbedBuilder } = require('discord.js');
 const punycode = require('punycode');
 const Entities = require('html-entities').AllHtmlEntities;

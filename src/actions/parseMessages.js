@@ -1,8 +1,8 @@
 const fs = require('fs');
 const path = require('path');
-const logger = require('../logger');
-const slackService = require('../slackService');
-const messageParser = require('../messageParser');
+const logger = require('../utils/logger');
+const slackService = require('../services/slackService');
+const messageParser = require('../services/messageParser');
 
 module.exports = async (sourcePath, outputPath, includes = [], excludes = []) => {
 

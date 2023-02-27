@@ -1,0 +1,12 @@
+{
+    "botToken": "mybottoken123",
+    "guildId": "myguildid123",
+    "backupPath": "my/backup/path",
+    "parentChannel": "My Parent Channel",
+    "includeChannels": ["channel1", "channel2"],
+    "excludeChannels": ["channel3", "channel4"],
+    "mapChannels": {
+        "channel1": "new-channel1", 
+        "channel2": "new-channel2"
+    }
+}

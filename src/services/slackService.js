@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
-const logger = require('./logger');
+const logger = require('../utils/logger');
 
 const slackClient = axios.create({});
 
