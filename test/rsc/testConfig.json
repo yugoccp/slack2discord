@@ -1,5 +1,5 @@
 {
-    "botToken": "mybottoken123",
+    "token": "mybottoken123",
     "guildId": "myguildid123",
     "backupPath": "my/backup/path",
     "parentChannel": "My Parent Channel",

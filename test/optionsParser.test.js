@@ -4,7 +4,7 @@ const optionsParser = require('../src/services/optionsParser');
 describe('Parse Command Options', function () {
   it('should parse config options', async function() {
     const result = await optionsParser.getOptions({config: "./test/rsc/testConfig.json"});
-    assert.equal(result.botToken, "mybottoken123");
+    assert.equal(result.token, "mybottoken123");
     assert.equal(result.guildId, "myguildid123");
     assert.equal(result.backupPath, "my/backup/path");
     assert.equal(result.parentChannel, "My Parent Channel");
@@ -15,7 +15,7 @@ describe('Parse Command Options', function () {
   it('should prioritize params options', async function() {
     const result = await optionsParser.getOptions({
       config: "./test/rsc/testConfig.json", 
-      botToken: "param-botToken" ,
+      token: "param-botToken" ,
       guildId: "param-guildId" ,
       backupPath: "param-backupPath" ,
       parentChannel: "param-parentChannel" ,
@@ -23,7 +23,7 @@ describe('Parse Command Options', function () {
       excludeChannels: ["paramChannel3", "paramChannel4"]
     });
     
-    assert.equal(result.botToken, "param-botToken");
+    assert.equal(result.token, "param-botToken");
     assert.equal(result.guildId, "param-guildId");
     assert.equal(result.backupPath, "param-backupPath");
     assert.equal(result.parentChannel, "param-parentChannel");

@@ -1,5 +1,5 @@
 {
-  "botToken": "",
+  "token": "",
   "guildId": "",
   "backupPath": "",
   "parentChannel": "Text Channel",
